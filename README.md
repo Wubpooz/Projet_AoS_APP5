@@ -1,6 +1,32 @@
 # Projet APP5 Architecture orienté Service
 **Goal: Gestionnaire de watch lists multi-plateforme.**
 
+&nbsp;  
+## P1
+- [ ] Database schema
+- [ ] Database seeding
+- [ ] API endpoints for CRUD operations on Media, Collections, and Users (with all HTTP verbs, pagination, filtering, navigation, validation)
+- [ ] Setup Better-auth
+- [ ] Dockerize
+- [ ] Tests (unitaires, postman)
+- [ ] OpenAPI
+
+## P2
+- [ ] gestion des droits d'accès (collaborateurs, lecteurs)
+- [ ] CI/CD
+- [ ] priorité de visionnage
+- [ ] note du film/série
+- [ ] regex sur le titre
+- [ ] filtrage multi-tags
+- [ ] Collection Parent (pour les sous-collections)
+- [ ] Recommandations basées sur les tags et les notes
+
+## P3
+- [ ] Intégration avec des APIs externes (ex: IMDb, Goodreads, etc.)
+
+
+&nbsp;  
+&nbsp;  
 ## Stack
 - Runtime: Bun
 - Framework: Hono
@@ -12,6 +38,8 @@
 - Authentication: Better-Auth
 
 
+&nbsp;  
+&nbsp;  
 ## DataModel
 **Media** (films, séries, livres, articles, etc.) avec des champs tels que :
 - Titre *string*
@@ -47,25 +75,3 @@ Associations :
 - Collection 0-n Users (collaborateurs)
 - Collection 0-n Users (lecteurs)
 
-
-## P1
-- [ ] Database schema
-- [ ] Database seeding
-- [ ] API endpoints for CRUD operations on Media, Collections, and Users (with all HTTP verbs, pagination, filtering, navigation, validation)
-- [ ] Setup Better-auth
-- [ ] Dockerize
-- [ ] Tests (unitaires, postman)
-- [ ] OpenAPI
-
-## P2
-- [ ] gestion des droits d'accès (collaborateurs, lecteurs)
-- [ ] CI/CD
-- [ ] priorité de visionnage
-- [ ] note du film/série
-- [ ] regex sur le titre
-- [ ] filtrage multi-tags
-- [ ] Collection Parent (pour les sous-collections)
-- [ ] Recommandations basées sur les tags et les notes
-
-## P3
-- [ ] Intégration avec des APIs externes (ex: IMDb, Goodreads, etc.)
