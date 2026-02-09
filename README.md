@@ -2,6 +2,12 @@
 **Goal: Gestionnaire de watch lists multi-plateforme.**
 
 &nbsp;  
+## Description
+On veut créer une application backend qui permet aux utilisateurs de créer et gérer des collections de médias (films, séries, livres, articles, etc.) qu'ils souhaitent regarder/lire peut importe la plateforme. La collaboration est au coeur de l'application (partage, edition des collections). On veut avoir les fonctionnalités suivantes:
+- Authentification
+- 
+
+&nbsp;  
 ## Getting Started
 1. Clone the repository
 2. Install dependencies with `bun install`
@@ -25,17 +31,20 @@
 
 ## P2
 - [ ] gestion des droits d'accès (collaborateurs, lecteurs)
-- [ ] CI/CD
-- [ ] priorité de visionnage
-- [ ] note du film/série
 - [ ] regex sur le titre
 - [ ] filtrage multi-tags
-- [ ] Collection Parent (pour les sous-collections)
-- [ ] Rate limiting
+- [ ] note du film/série
 
-## P3
+## P3 (bonus)
+- [ ] Collection Parent (pour les sous-collections)
+- [ ] priorité de visionnage
+- [ ] CI/CD
+- [ ] Front-end
+
+## P4 (bonus bonus)
 - [ ] Recommandations basées sur les tags et les notes
 - [ ] Intégration avec des APIs externes (ex: IMDb, Goodreads, etc.)
+- [ ] Rate limiting
 
 
 &nbsp;  
