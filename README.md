@@ -1,3 +1,71 @@
 # Projet APP5 Architecture orienté Service
+**Goal: Gestionnaire de watch lists multi-plateforme.**
 
-Stack: Bun + Hono + Zod + Prisma  
+## Stack
+- Runtime: Bun
+- Framework: Hono
+- Validation: Zod
+- ORM: Prisma
+- Database: Postgres
+- Containerization: Docker
+- CI/CD: GitHub Actions
+- Authentication: Better-Auth
+
+
+## DataModel
+Media (films, séries, livres, articles, etc.) avec des champs tels que :
+- Titre *string*
+- Description/synopsis *string*
+- Type *enum* (film, série, livre, article, etc.)
+- Genre(s) *string list* (ex: "sci-fi", "drame", "comédie", etc.)
+- Année de sortie *date*
+- Réalisateur/Auteur *string*
+- Tags *string list* (ex: "sci-fi", "drame", "comédie", etc.)
+- Availability/plateforme *string list* (ex: Netflix, Amazon Prime, etc.)
+- Scores/notes *string* (ex: IMDb, Rotten Tomatoes, etc.)
+
+Collections (watch lists) avec des champs tels que :
+- Nom de la collection  *string*
+- Description *string*
+- Tags *string list* (ex: "films à voir", "séries à binge-watcher", etc.)
+- Date de création *date*
+- Date de mise à jour *date*
+- Visibilité *enum* (publique/privée)
+
+
+Users avec des champs tels que :
+- Nom d'utilisateur *string*
+- Email *string*
+...
+
+
+Associations :
+- Media 0-n Collections
+- Collection 1-n Media
+- User 0-n Collections
+- Collection 1 User (owner)
+- Collection 0-n Users (collaborateurs)
+- Collection 0-n Users (lecteurs)
+
+
+## P1
+- [ ] Database schema
+- [ ] Database seeding
+- [ ] API endpoints for CRUD operations on Media, Collections, and Users (with all HTTP verbs, pagination, filtering, navigation, validation)
+- [ ] Setup Better-auth
+- [ ] Dockerize
+- [ ] Tests (unitaires, postman)
+- [ ] OpenAPI
+
+## P2
+- [ ] gestion des droits d'accès (collaborateurs, lecteurs)
+- [ ] CI/CD
+- [ ] priorité de visionnage
+- [ ] note du film/série
+- [ ] regex sur le titre
+- [ ] filtrage multi-tags
+- [ ] Collection Parent (pour les sous-collections)
+- [ ] Recommandations basées sur les tags et les notes
+
+## P3
+- [ ] Intégration avec des APIs externes (ex: IMDb, Goodreads, etc.)
