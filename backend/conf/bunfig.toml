@@ -1,0 +1,14 @@
+# Coverage thresholds (0-100)
+coverage = true
+coverageThreshold = 80  # Overall coverage percentage
+coverageThresholdPerFile = 70  # Per-file coverage
+
+# Specific coverage types
+coverageThresholds = { line = 80, function = 80, branch = 75, statement = 80 }
+
+# Skip coverage for certain files
+coverageSkipTestFiles = true
+coverageReporter = ["text", "json", "html", "lcov"]
+
+[test]
+timeout = 5000  # Milliseconds per test

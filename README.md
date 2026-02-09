@@ -2,27 +2,49 @@
 **Goal: Gestionnaire de watch lists multi-plateforme.**
 
 &nbsp;  
+## Description
+On veut créer une application backend qui permet aux utilisateurs de créer et gérer des collections de médias (films, séries, livres, articles, etc.) qu'ils souhaitent regarder/lire peut importe la plateforme. La collaboration est au coeur de l'application (partage, edition des collections). On veut avoir les fonctionnalités suivantes:
+- Authentification
+- 
+
+&nbsp;  
+## Getting Started
+1. Clone the repository
+2. Install dependencies with `bun install`
+3. Set up the database client with `bunx --bun prisma generate`
+4. Add the environment variables in a `.env` file (see `.env.example`)
+5. Run the development server with `bun run dev`
+
+&nbsp;  
 ## P1
 - [ ] Database schema
 - [ ] Database seeding
 - [ ] API endpoints for CRUD operations on Media, Collections, and Users (with all HTTP verbs, pagination, filtering, navigation, validation)
-- [ ] Setup Better-auth
+  - [x] Setup Hono et Bun (with routes, validation, error handling)
+  - [ ] Implement API endpoints (CRUD for Media, Collections, Users)
+  - [ ] Implement pagination, filtering, and navigation for listing endpoints
+  - [ ] Implement validation with Zod for request bodies and query parameters
+- [x] Setup Better-auth
 - [ ] Dockerize
 - [ ] Tests (unitaires, postman)
 - [ ] OpenAPI
 
 ## P2
 - [ ] gestion des droits d'accès (collaborateurs, lecteurs)
-- [ ] CI/CD
-- [ ] priorité de visionnage
-- [ ] note du film/série
 - [ ] regex sur le titre
 - [ ] filtrage multi-tags
-- [ ] Collection Parent (pour les sous-collections)
-- [ ] Recommandations basées sur les tags et les notes
+- [ ] note du film/série
 
-## P3
+## P3 (bonus)
+- [ ] Collection Parent (pour les sous-collections)
+- [ ] priorité de visionnage
+- [ ] CI/CD
+- [ ] Front-end
+
+## P4 (bonus bonus)
+- [ ] Recommandations basées sur les tags et les notes
 - [ ] Intégration avec des APIs externes (ex: IMDb, Goodreads, etc.)
+- [ ] Rate limiting
 
 
 &nbsp;  

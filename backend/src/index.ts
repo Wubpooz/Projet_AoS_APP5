@@ -1,0 +1,128 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { csrf } from 'hono/csrf';
+import { requestId } from 'hono/request-id';
+import { logger } from 'hono/logger';
+import { openAPIRouteHandler } from 'hono-openapi';
+
+import { auth, type AuthType } from "./middleware/auth";
+import { errorHandler } from './middleware/errorHandler';
+// import { standardRateLimiter } from './middleware/rateLimiter';
+
+
+import { authRoutes } from './routes/auth.routes.ts';
+import { userRoutes } from './routes/user.routes';
+
+
+export const PORT = process.env.PORT || 3001;
+
+// ==================== Initialize Hono app ====================
+const app = new Hono<{ Variables: AuthType }>();
+export default app;
+
+
+app.use("*", async (c, next) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  	if (!session) {
+    	c.set("user", null);
+    	c.set("session", null);
+    	await next();
+        return;
+  	}
+  	c.set("user", session.user);
+  	c.set("session", session.session);
+  	await next();
+});
+
+
+// ==================== Security configurations ====================
+app.use(
+	"/api/auth/*", // or replace with "*" to enable cors for all routes
+	cors({
+		origin: "http://localhost:3001", // replace with your origin
+		allowHeaders: ["Content-Type", "Authorization"],
+		allowMethods: ["POST", "GET", "OPTIONS"],
+		exposeHeaders: ["Content-Length"],
+		maxAge: 600,
+		credentials: true
+	})
+);
+
+app.on(["POST", "GET"], "/api/auth/*", (c) => {
+	return auth.handler(c.req.raw);
+});
+
+app.use(csrf());
+
+
+// Rate limiting
+// app.use(standardRateLimiter);
+
+
+// Request ID and logging
+app.use('*', requestId());
+app.use('*', logger());
+
+
+
+// ==================== Routes ====================
+app.get(
+  '/openapi',
+  openAPIRouteHandler(app, {
+    documentation: {
+      info: {
+        title: 'Media Collection API',
+        version: '1.0.0',
+        description: 'A simple API for managing a media collection (movies, TV shows, books, etc.)',
+      },
+      servers: [
+        { url: 'http://localhost:3001', description: 'Local Server' },
+      ],
+    },
+  })
+);
+
+app.get('/health', (c) => {
+  return c.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    requestId: c.get('requestId'),
+  }, 200);
+});
+
+
+app.route('/api/auth', authRoutes);
+app.route('/api/users', userRoutes);
+
+
+// 404 handler
+app.notFound((c) => {
+  return c.json({
+    error: 'Not Found',
+    message: `Route ${c.req.method} ${c.req.path} not found`,
+  }, 404);
+});
+
+
+// Error handling middleware
+app.onError(errorHandler);
+
+
+
+
+// ==================== Start server ====================
+const server = Bun.serve({
+  port: Number(PORT),
+  fetch: app.fetch,
+});
+console.log(`🚀 Backend server running on port ${server.port}`);
+console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.stop();
+  console.log('HTTP server closed');
+  process.exit(0);
+});
