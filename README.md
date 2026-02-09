@@ -1,5 +1,3 @@
-# Projet_AoS_APP5
+# Projet APP5 Architecture orienté Service
 
-Go ?
-Bun + Hono + Zod ?
-Node + express/fastify + zod ?
+Stack: Bun + Hono + Zod + Prisma  
