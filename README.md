@@ -10,10 +10,41 @@ On veut créer une application backend qui permet aux utilisateurs de créer et 
 &nbsp;  
 ## Getting Started
 1. Clone the repository
-2. Install dependencies with `bun install`
-3. Set up the database client with `bunx --bun prisma generate`
-4. Add the environment variables in a `.env` file (see `.env.example`)
-5. Run the development server with `bun run dev`
+2. Install dependencies:
+```
+bun install
+```
+3. Start Postgres (Docker):
+```
+docker run --name aos-postgres -e POSTGRES_USER=johndoe -e POSTGRES_PASSWORD=randompassword -e POSTGRES_DB=mydb -p 5432:5432 -d postgres:16
+```
+4. Add environment variables in `backend/.env` (see `backend/.env.example`).
+5. Generate Prisma client and apply migrations:
+```
+bun run prisma:generate
+bun run prisma:migrate
+```
+6. Seed the database:
+```
+bun run db:seed
+```
+7. Run the development server:
+```
+bun run dev
+```
+
+Notes:
+- Bun loads `.env` from the current working directory. If you run scripts from the repo root, either copy `backend/.env` to `.env` at the repo root or export `DATABASE_URL` in your shell.
+- Default server port is 3001.
+
+
+&nbsp;  
+**Updating the Schema:**
+- Update `prisma/schema.prisma` with your changes.
+- Run `bun run prisma:generate` to regenerate the Prisma client.
+- Run `bun run prisma:migrate` to apply the new schema to the database.
+- Run `bun run db:seed` to re-seed the database with the new schema (optional, depending on your changes).
+
 
 &nbsp;  
 ## P1
