@@ -13,7 +13,7 @@
 
 
 ## DataModel
-Media (films, séries, livres, articles, etc.) avec des champs tels que :
+**Media** (films, séries, livres, articles, etc.) avec des champs tels que :
 - Titre *string*
 - Description/synopsis *string*
 - Type *enum* (film, série, livre, article, etc.)
@@ -24,7 +24,7 @@ Media (films, séries, livres, articles, etc.) avec des champs tels que :
 - Availability/plateforme *string list* (ex: Netflix, Amazon Prime, etc.)
 - Scores/notes *string* (ex: IMDb, Rotten Tomatoes, etc.)
 
-Collections (watch lists) avec des champs tels que :
+**Collections** (watch lists) avec des champs tels que :
 - Nom de la collection  *string*
 - Description *string*
 - Tags *string list* (ex: "films à voir", "séries à binge-watcher", etc.)
@@ -33,7 +33,7 @@ Collections (watch lists) avec des champs tels que :
 - Visibilité *enum* (publique/privée)
 
 
-Users avec des champs tels que :
+**Users** avec des champs tels que :
 - Nom d'utilisateur *string*
 - Email *string*
 ...
