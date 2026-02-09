@@ -4,6 +4,7 @@ import { csrf } from 'hono/csrf';
 import { requestId } from 'hono/request-id';
 import { logger } from 'hono/logger';
 import { openAPIRouteHandler } from 'hono-openapi';
+import { swaggerUI } from '@hono/swagger-ui';
 
 import { auth, type AuthType } from "./middleware/auth";
 import { errorHandler } from './middleware/errorHandler';
@@ -12,8 +13,7 @@ import { errorHandler } from './middleware/errorHandler';
 
 import { authRoutes } from './routes/auth.routes.ts';
 import { userRoutes } from './routes/user.routes';
-import { version } from 'node:os';
-import { stat } from 'node:fs';
+
 
 
 export const PORT = process.env.PORT || 3001;
@@ -96,6 +96,14 @@ app.get(
       ],
     },
     includeEmptyPaths: true,
+  })
+);
+
+app.get(
+  '/docs',
+  swaggerUI({
+    url: '/openapi',
+    title: 'Media Collection API Docs',
   })
 );
 
