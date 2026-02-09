@@ -14,7 +14,11 @@
 - [ ] Database schema
 - [ ] Database seeding
 - [ ] API endpoints for CRUD operations on Media, Collections, and Users (with all HTTP verbs, pagination, filtering, navigation, validation)
-- [ ] Setup Better-auth
+  - [x] Setup Hono et Bun (with routes, validation, error handling)
+  - [ ] Implement API endpoints (CRUD for Media, Collections, Users)
+  - [ ] Implement pagination, filtering, and navigation for listing endpoints
+  - [ ] Implement validation with Zod for request bodies and query parameters
+- [x] Setup Better-auth
 - [ ] Dockerize
 - [ ] Tests (unitaires, postman)
 - [ ] OpenAPI
@@ -27,10 +31,10 @@
 - [ ] regex sur le titre
 - [ ] filtrage multi-tags
 - [ ] Collection Parent (pour les sous-collections)
-- [ ] Recommandations basées sur les tags et les notes
 - [ ] Rate limiting
 
 ## P3
+- [ ] Recommandations basées sur les tags et les notes
 - [ ] Intégration avec des APIs externes (ex: IMDb, Goodreads, etc.)
 
 
