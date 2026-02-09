@@ -12,6 +12,8 @@ import { errorHandler } from './middleware/errorHandler';
 
 import { authRoutes } from './routes/auth.routes.ts';
 import { userRoutes } from './routes/user.routes';
+import { version } from 'node:os';
+import { stat } from 'node:fs';
 
 
 export const PORT = process.env.PORT || 3001;
@@ -66,6 +68,20 @@ app.use('*', logger());
 
 
 // ==================== Routes ====================
+const rootHandler = (c: any) => {
+  return c.json({
+    name: 'Media Collection API',
+    version: '1.0.0',
+    docs: '/openapi',
+    status: 'ok',
+    message: 'Welcome to the Media Collection API!',
+  }, 200);
+};
+
+app.all('/', rootHandler);
+app.all('/api', rootHandler);
+
+
 app.get(
   '/openapi',
   openAPIRouteHandler(app, {
