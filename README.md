@@ -59,6 +59,7 @@
 - Date de création *date*
 - Date de mise à jour *date*
 - Visibilité *enum* (publique/privée)
+- Owner *User* clé étrangère (relation vers l'utilisateur qui a créé la collection)
 
 
 **Users** avec des champs tels que :
@@ -69,9 +70,7 @@
 
 Associations :
 - Media 0-n Collections
-- Collection 1-n Media
+- Collection 0-n Media
 - User 0-n Collections
-- Collection 1 User (owner)
-- Collection 0-n Users (collaborateurs)
-- Collection 0-n Users (lecteurs)
+- Collection 0-n Users (collaborateurs/lecteurs) - table intermédiaire
 
