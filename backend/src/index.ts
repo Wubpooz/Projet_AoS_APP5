@@ -95,6 +95,7 @@ app.get(
         { url: 'http://localhost:3001', description: 'Local Server' },
       ],
     },
+    includeEmptyPaths: true,
   })
 );
 

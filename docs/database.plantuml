@@ -57,7 +57,6 @@ entity "Collection" as Collection {
   created_at : timestamp
   updated_at : timestamp
   visibility : Visibility
-  owner_id : UUID <<FK User.id>>
 }
 
 entity "collection_media" as CollectionMedia {
@@ -80,14 +79,10 @@ entity "collection_user" as CollectionUser {
 }
 
 ' Relationships
-User ||--o{ Collection : "owns"
 Collection ||--o{ CollectionMedia : "contains"
 Media ||--o{ CollectionMedia : "included_in"
 Collection ||--o{ CollectionUser : "members"
 User ||--o{ CollectionUser : "member_of"
-
-' Optional convenience link showing owner FK
-Collection }o--|| User : "owner"
 
 note right of CollectionMedia
   Many-to-many between Collections and Media.
@@ -95,8 +90,8 @@ note right of CollectionMedia
 end note
 
 note right of CollectionUser
-  Join table for collaborators/readers. Owner kept
-  explicitly on Collection.owner_id.
+  Join table for owners/collaborators/readers.
+  Additional fields: invited_at, accepted
 end note
 
 @enduml
