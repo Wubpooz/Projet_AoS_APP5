@@ -2,7 +2,8 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 
 import prisma from '../db/index';
-import env from '../../conf/env';
+import env from '../../env';
+import { username } from "better-auth/plugins/username";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -21,14 +22,17 @@ export const auth = betterAuth({
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
-  }, 
+  },
   advanced: {
     defaultCookieAttributes: {
       sameSite: "none",
       secure: true,
       partitioned: true // New browser standards will mandate this for foreign cookies
     }
-  }
+  },
+    plugins: [ 
+        username() 
+    ]
 });
 
 

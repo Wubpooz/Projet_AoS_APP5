@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "bun --hot run backend/src/index.ts",
     "build": "tsc",
-    "start": "bun run build/index.js"
+    "start": "bun run build/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "db:seed": "bun run backend/src/db/seed.ts"
   },
   "resolutions": {
     "hono": "^4.11.9",

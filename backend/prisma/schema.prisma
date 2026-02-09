@@ -14,16 +14,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Data model for Better-Auth
+
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  id                String           @id
+  name              String
+  email             String
+  emailVerified     Boolean          @default(false)
+  image             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  sessions          Session[]
+  accounts          Account[]
+  username          String?          @unique
+  collections       Collection[]
+  collectionMembers CollectionUser[]
+
+  displayUsername String?
 
   @@unique([email])
   @@map("user")
@@ -75,4 +82,92 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// App Data Models
+
+enum MediaType {
+  FILM
+  SERIES
+  BOOK
+  ARTICLE
+  OTHER
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum CollectionRole {
+  OWNER
+  COLLABORATOR
+  READER
+}
+
+model Media {
+  id             String    @id @default(uuid())
+  title          String
+  description    String?
+  type           MediaType
+  releaseDate    DateTime? @map("release_date")
+  directorAuthor String?   @map("director_author")
+  tags           String[]
+  platforms      String[]
+  scores         Json?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  collections CollectionMedia[]
+
+  @@map("media")
+}
+
+model Collection {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  tags        String[]
+  visibility  Visibility @default(PRIVATE)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  media   CollectionMedia[]
+  members CollectionUser[]
+
+  @@map("collections")
+}
+
+model CollectionMedia {
+  id       String   @id @default(uuid())
+  position Int      @default(0)
+  addedAt  DateTime @default(now()) @map("added_at")
+
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  mediaId String
+  media   Media  @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, mediaId])
+  @@map("collection_media")
+}
+
+model CollectionUser {
+  id        String         @id @default(uuid())
+  role      CollectionRole @default(READER)
+  invitedAt DateTime       @default(now()) @map("invited_at")
+  accepted  Boolean        @default(false)
+
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, userId])
+  @@map("collection_users")
 }
