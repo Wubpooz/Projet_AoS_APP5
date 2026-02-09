@@ -16,7 +16,7 @@ import { userRoutes } from './routes/user.routes';
 
 
 
-export const PORT = process.env.PORT || 3001;
+export const PORT = process.env.PORT || 3000;
 
 // ==================== Initialize Hono app ====================
 const app = new Hono<{ Variables: AuthType }>();
@@ -41,7 +41,7 @@ app.use("*", async (c, next) => {
 app.use(
 	"*", // CORS enabled for all routes (required for Swagger UI)
 	cors({
-		origin: "http://localhost:3001",
+		origin: "http://localhost:3000",
 		allowHeaders: ["Content-Type", "Authorization"],
 		allowMethods: ["POST", "GET", "PATCH", "DELETE", "OPTIONS"],
 		exposeHeaders: ["Content-Length"],
@@ -54,7 +54,10 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
 	return auth.handler(c.req.raw);
 });
 
-app.use(csrf());
+app.use(csrf({
+	origin: ["http://localhost:3000"],
+  secFetchSite: ['same-origin', 'same-site']
+}));
 
 
 // Rate limiting
@@ -92,7 +95,7 @@ app.get(
         description: 'A simple API for managing a media collection (movies, TV shows, books, etc.)',
       },
       servers: [
-        { url: 'http://localhost:3001', description: 'Local Server' },
+        { url: 'http://localhost:3000', description: 'Local Server' },
       ],
       tags: [
         { name: 'Auth', description: 'Authentication endpoints' },

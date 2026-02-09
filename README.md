@@ -35,7 +35,7 @@ bun run dev
 
 Notes:
 - Bun loads `.env` from the current working directory. If you run scripts from the repo root, either copy `backend/.env` to `.env` at the repo root or export `DATABASE_URL` in your shell.
-- Default server port is 3001.
+- Default server port is 3000.
 
 
 &nbsp;  

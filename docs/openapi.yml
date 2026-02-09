@@ -7,7 +7,7 @@
       "version": "1.0.0",
     },
   "servers":
-    [{ "url": "http://localhost:3001", "description": "Local Server" }],
+    [{ "url": "http://localhost:3000", "description": "Local Server" }],
   "tags":
     [
       { "name": "Auth", "description": "Authentication endpoints" },
