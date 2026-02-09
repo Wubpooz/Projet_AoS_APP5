@@ -2,6 +2,14 @@
 **Goal: Gestionnaire de watch lists multi-plateforme.**
 
 &nbsp;  
+## Getting Started
+1. Clone the repository
+2. Install dependencies with `bun install`
+3. Set up the database client with `bunx --bun prisma generate`
+4. Add the environment variables in a `.env` file (see `.env.example`)
+5. Run the development server with `bun run dev`
+
+&nbsp;  
 ## P1
 - [ ] Database schema
 - [ ] Database seeding
@@ -20,6 +28,7 @@
 - [ ] filtrage multi-tags
 - [ ] Collection Parent (pour les sous-collections)
 - [ ] Recommandations basées sur les tags et les notes
+- [ ] Rate limiting
 
 ## P3
 - [ ] Intégration avec des APIs externes (ex: IMDb, Goodreads, etc.)
