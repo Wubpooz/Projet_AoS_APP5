@@ -1,0 +1,5 @@
+# Deploy Database
+# Build then
+# SAST (Static Application Security Testing)
+  # Analyzes source code without execution
+  # Tools: CodeQL, Trivy, Semgrep, ESLint, Bandit, Snyk, Gitleaks, SonarCloud
