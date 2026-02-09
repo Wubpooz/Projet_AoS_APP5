@@ -39,11 +39,11 @@ app.use("*", async (c, next) => {
 
 // ==================== Security configurations ====================
 app.use(
-	"/api/auth/*", // or replace with "*" to enable cors for all routes
+	"*", // CORS enabled for all routes (required for Swagger UI)
 	cors({
-		origin: "http://localhost:3001", // replace with your origin
+		origin: "http://localhost:3001",
 		allowHeaders: ["Content-Type", "Authorization"],
-		allowMethods: ["POST", "GET", "OPTIONS"],
+		allowMethods: ["POST", "GET", "PATCH", "DELETE", "OPTIONS"],
 		exposeHeaders: ["Content-Length"],
 		maxAge: 600,
 		credentials: true
