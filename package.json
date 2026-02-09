@@ -9,7 +9,8 @@
     "start": "bun run build/index.js",
     "prisma:generate": "cd backend && bunx --bun prisma generate",
     "prisma:migrate": "cd backend && bunx --bun prisma migrate dev",
-    "db:seed": "bun run backend/src/db/seed.ts"
+    "db:seed": "bun run backend/src/db/seed.ts",
+    "openapi:generate": "bun run backend/scripts/generate-openapi.ts"
   },
   "resolutions": {
     "hono": "^4.11.9",

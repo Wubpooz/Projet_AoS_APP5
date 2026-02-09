@@ -94,6 +94,20 @@ app.get(
       servers: [
         { url: 'http://localhost:3001', description: 'Local Server' },
       ],
+      tags: [
+        { name: 'Auth', description: 'Authentication endpoints' },
+        { name: 'Users', description: 'User profile endpoints' },
+      ],
+      components: {
+        securitySchemes: {
+          sessionCookie: {
+            type: 'apiKey',
+            in: 'cookie',
+            name: 'better-auth.session',
+            description: 'Better-Auth session cookie',
+          },
+        },
+      },
     },
     includeEmptyPaths: true,
   })
@@ -137,17 +151,19 @@ app.onError(errorHandler);
 
 
 // ==================== Start server ====================
-const server = Bun.serve({
-  port: Number(PORT),
-  fetch: app.fetch,
-});
-console.log(`🚀 Backend server running on port ${server.port}`);
-console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+if (import.meta.main) {
+  const server = Bun.serve({
+    port: Number(PORT),
+    fetch: app.fetch,
+  });
+  console.log(`🚀 Backend server running on port ${server.port}`);
+  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.stop();
-  console.log('HTTP server closed');
-  process.exit(0);
-});
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM signal received: closing HTTP server');
+    server.stop();
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+}

@@ -1,0 +1,473 @@
+{
+  "openapi": "3.1.0",
+  "info":
+    {
+      "title": "Media Collection API",
+      "description": "A simple API for managing a media collection (movies, TV shows, books, etc.)",
+      "version": "1.0.0",
+    },
+  "servers":
+    [{ "url": "http://localhost:3001", "description": "Local Server" }],
+  "tags":
+    [
+      { "name": "Auth", "description": "Authentication endpoints" },
+      { "name": "Users", "description": "User profile endpoints" },
+    ],
+  "components":
+    {
+      "securitySchemes":
+        {
+          "sessionCookie":
+            {
+              "type": "apiKey",
+              "in": "cookie",
+              "name": "better-auth.session",
+              "description": "Better-Auth session cookie",
+            },
+        },
+    },
+  "paths":
+    {
+      "/openapi":
+        { "get": { "operationId": "getOpenapi", "responses": { "200": {} } } },
+      "/docs":
+        { "get": { "operationId": "getDocs", "responses": { "200": {} } } },
+      "/health":
+        { "get": { "operationId": "getHealth", "responses": { "200": {} } } },
+      "/api/auth/status":
+        {
+          "get":
+            {
+              "operationId": "getApiAuthStatus",
+              "tags": ["Auth"],
+              "description": "Check authentication status from the session cookie",
+              "parameters":
+                [
+                  {
+                    "in": "query",
+                    "name": "includeSession",
+                    "schema": { "type": "string", "enum": ["true", "false"] },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Authentication status",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "object",
+                                  "properties":
+                                    {
+                                      "authenticated": { "type": "boolean" },
+                                      "user":
+                                        { "anyOf": [{}, { "type": "null" }] },
+                                      "session":
+                                        { "anyOf": [{}, { "type": "null" }] },
+                                    },
+                                  "required":
+                                    ["authenticated", "user", "session"],
+                                },
+                              "example":
+                                {
+                                  "authenticated": true,
+                                  "user":
+                                    {
+                                      "id": "user_123",
+                                      "email": "user@example.com",
+                                    },
+                                  "session":
+                                    {
+                                      "id": "session_123",
+                                      "expiresAt": "2026-01-01T00:00:00.000Z",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/auth/register":
+        {
+          "post":
+            {
+              "operationId": "postApiAuthRegister",
+              "tags": ["Auth"],
+              "description": "Register a new user account",
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "type": "object",
+                              "properties":
+                                {
+                                  "email":
+                                    {
+                                      "type": "string",
+                                      "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+                                    },
+                                  "password":
+                                    { "type": "string", "minLength": 8 },
+                                  "name":
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                    },
+                                },
+                              "required": ["email", "password"],
+                            },
+                        },
+                    },
+                  "description": "Credentials are required in the request body but omitted from examples.",
+                },
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Registration result",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "object",
+                                  "properties":
+                                    {
+                                      "message": { "type": "string" },
+                                      "user": {},
+                                      "session": {},
+                                    },
+                                  "required": ["message"],
+                                },
+                              "example":
+                                { "message": "Registration successful" },
+                            },
+                        },
+                    },
+                  "400": { "description": "Invalid payload or content type" },
+                },
+            },
+        },
+      "/api/auth/login":
+        {
+          "post":
+            {
+              "operationId": "postApiAuthLogin",
+              "tags": ["Auth"],
+              "description": "Log in with credentials and receive a session cookie",
+              "parameters":
+                [
+                  {
+                    "name": "Authorization",
+                    "in": "header",
+                    "required": true,
+                    "schema": { "type": "string" },
+                    "description": "Authorization header for login (e.g. Basic or Bearer token)",
+                    "example": "Bearer <token>",
+                  },
+                ],
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "type": "object",
+                              "properties":
+                                {
+                                  "email":
+                                    {
+                                      "type": "string",
+                                      "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+                                    },
+                                  "password":
+                                    { "type": "string", "minLength": 8 },
+                                },
+                              "required": ["email", "password"],
+                            },
+                        },
+                    },
+                  "description": "Credentials are required in the request body but omitted from examples.",
+                },
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Login result",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "object",
+                                  "properties":
+                                    {
+                                      "message": { "type": "string" },
+                                      "user": {},
+                                      "session": {},
+                                    },
+                                  "required": ["message"],
+                                },
+                              "example": { "message": "Login successful" },
+                            },
+                        },
+                      "headers":
+                        {
+                          "Set-Cookie":
+                            {
+                              "description": "Session cookie set by Better-Auth",
+                              "schema": { "type": "string" },
+                            },
+                        },
+                    },
+                  "400":
+                    {
+                      "description": "Missing Authorization header or invalid content type",
+                    },
+                },
+            },
+        },
+      "/api/auth/logout":
+        {
+          "post":
+            {
+              "operationId": "postApiAuthLogout",
+              "tags": ["Auth"],
+              "description": "Log out and revoke the session cookie",
+              "parameters":
+                [
+                  {
+                    "name": "better-auth.session",
+                    "in": "cookie",
+                    "required": true,
+                    "schema": { "type": "string" },
+                    "description": "Better-Auth session cookie",
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Logout result",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "object",
+                                  "properties":
+                                    {
+                                      "message": { "type": "string" },
+                                      "user": {},
+                                      "session": {},
+                                    },
+                                  "required": ["message"],
+                                },
+                              "example": { "message": "Logout successful" },
+                            },
+                        },
+                    },
+                  "401": { "description": "Unauthorized" },
+                },
+            },
+        },
+      "/api/users/profile":
+        {
+          "get":
+            {
+              "operationId": "getApiUsersProfile",
+              "tags": ["Users"],
+              "description": "Get the authenticated user profile",
+              "parameters":
+                [
+                  {
+                    "name": "better-auth.session",
+                    "in": "cookie",
+                    "required": true,
+                    "schema": { "type": "string" },
+                    "description": "Better-Auth session cookie",
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "User profile",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "object",
+                                  "properties": { "user": {} },
+                                  "required": ["user"],
+                                },
+                              "example":
+                                {
+                                  "user":
+                                    {
+                                      "id": "user_123",
+                                      "email": "user@example.com",
+                                      "name": "User Example",
+                                      "username": "userexample",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                  "401": { "description": "Unauthorized" },
+                  "404": { "description": "User not found" },
+                },
+            },
+          "patch":
+            {
+              "operationId": "patchApiUsersProfile",
+              "tags": ["Users"],
+              "description": "Update authenticated user profile",
+              "parameters":
+                [
+                  {
+                    "name": "better-auth.session",
+                    "in": "cookie",
+                    "required": true,
+                    "schema": { "type": "string" },
+                    "description": "Better-Auth session cookie",
+                  },
+                ],
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "type": "object",
+                              "properties":
+                                {
+                                  "name":
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                    },
+                                  "image": { "type": "string", "minLength": 1 },
+                                  "username":
+                                    {
+                                      "type": "string",
+                                      "minLength": 2,
+                                      "maxLength": 40,
+                                    },
+                                  "displayUsername":
+                                    {
+                                      "type": "string",
+                                      "minLength": 2,
+                                      "maxLength": 60,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Updated user profile",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "object",
+                                  "properties": { "user": {} },
+                                  "required": ["user"],
+                                },
+                              "example":
+                                {
+                                  "user":
+                                    {
+                                      "id": "user_123",
+                                      "email": "user@example.com",
+                                      "name": "Updated Name",
+                                      "username": "newusername",
+                                      "displayUsername": "New Username",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                  "400": { "description": "Invalid payload" },
+                  "401": { "description": "Unauthorized" },
+                },
+            },
+        },
+      "/api/users/{id}":
+        {
+          "get":
+            {
+              "operationId": "getApiUsersById",
+              "tags": ["Users"],
+              "description": "Get a public user profile by id",
+              "parameters":
+                [
+                  {
+                    "in": "path",
+                    "name": "id",
+                    "schema": { "type": "string", "minLength": 1 },
+                    "required": true,
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "User profile",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "object",
+                                  "properties": { "user": {} },
+                                  "required": ["user"],
+                                },
+                              "example":
+                                {
+                                  "user":
+                                    {
+                                      "id": "user_123",
+                                      "email": "user@example.com",
+                                      "name": "User Example",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                  "404": { "description": "User not found" },
+                },
+            },
+        },
+    },
+}
