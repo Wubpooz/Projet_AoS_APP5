@@ -1,7 +1,11 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { describeRoute, resolver, validator } from 'hono-openapi';
+import { APIError } from 'better-auth/api';
+import { auth } from '@/middleware/auth';
 import type { AuthType } from '@/middleware/auth';
+
+type ErrorStatusCode = 400 | 401 | 500;
 
 export const authRoutes = new Hono<{ Variables: AuthType }>();
 
@@ -116,7 +120,28 @@ authRoutes.post(
   if (user) {
     return c.json({ message: 'Already logged in', user });
   }
-  return c.json({ message: 'Registration successful' });
+
+  const body = c.req.valid('json');
+
+  try {
+    const result = await auth.api.signUpEmail({
+      body: {
+        email: body.email,
+        password: body.password,
+        name: body.name ?? body.email.split('@')[0] ?? 'User',
+      },
+    });
+
+    return c.json({
+      message: 'Registration successful',
+      user: result.user,
+    });
+  } catch (error) {
+    if (error instanceof APIError) {
+      return c.json({ error: error.message }, error.status as ErrorStatusCode);
+    }
+    return c.json({ error: 'An unexpected error occurred' }, 500);
+  }
   }
 );
 
@@ -161,6 +186,7 @@ authRoutes.post(
         },
       },
       400: { description: 'Missing Authorization header or invalid content type' },
+      401: { description: 'Invalid credentials' },
     },
   }),
   validator('json', loginBodySchema),
@@ -179,7 +205,26 @@ authRoutes.post(
     return c.json({ message: 'Already logged in', user, session });
   }
 
-  return c.json({ message: 'Login successful' });
+  const body = c.req.valid('json');
+
+  try {
+    const result = await auth.api.signInEmail({
+      body: {
+        email: body.email,
+        password: body.password,
+      },
+    });
+
+    return c.json({
+      message: 'Login successful',
+      user: result.user,
+    });
+  } catch (error) {
+    if (error instanceof APIError) {
+      return c.json({ error: error.message }, error.status as ErrorStatusCode);
+    }
+    return c.json({ error: 'An unexpected error occurred' }, 500);
+  }
   }
 );
 
@@ -215,6 +260,18 @@ authRoutes.post(
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
-  return c.json({ message: 'Logout successful' });
+
+  try {
+    await auth.api.signOut({
+      headers: c.req.raw.headers,
+    });
+
+    return c.json({ message: 'Logout successful' });
+  } catch (error) {
+    if (error instanceof APIError) {
+      return c.json({ error: error.message }, error.status as ErrorStatusCode);
+    }
+    return c.json({ error: 'An unexpected error occurred' }, 500);
+  }
   }
 );
