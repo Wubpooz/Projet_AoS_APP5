@@ -9,7 +9,12 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
-  trustedOrigins: [env.FRONTEND_URL], // frontend
+  trustedOrigins: [env.FRONTEND_URL, env.BETTER_AUTH_URL, "http://localhost:3000"],
+  rateLimit: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: "Too many requests from this IP, please try again later."
+  },
   emailAndPassword: { 
     enabled: true, 
   }, 
