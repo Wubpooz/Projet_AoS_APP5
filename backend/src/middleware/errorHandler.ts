@@ -25,19 +25,17 @@ export const errorHandler: ErrorHandler = (err, c) => {
     : cause;
 
   // Log error
-  console.error('Error occurred', {
+  console.error(err);
+  console.error('Error context', {
     statusCode,
     message,
     name: err.name,
     requestId: c.get('requestId'),
     origin,
-    stack,
     cause: causeInfo,
     path: c.req.path,
     method: c.req.method,
   });
-
-  console.debug(err);
 
   // Send error response
   return c.json({
