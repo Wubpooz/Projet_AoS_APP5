@@ -8,7 +8,7 @@ import { swaggerUI } from '@hono/swagger-ui';
 
 import { auth, type AuthType } from "./middleware/auth";
 import { errorHandler } from './middleware/errorHandler';
-
+import prisma from './db/index';
 
 import { authRoutes } from './routes/auth.routes.ts';
 import { userRoutes } from './routes/user.routes';
@@ -149,12 +149,25 @@ app.get(
   })
 );
 
-app.get('/health', (c) => {
+app.get('/health', async (c) => {
+  const timestamp = new Date().toISOString();
+  let dbConnection = 'disconnected';
+
+  try {
+    // Test database connection
+    await prisma.$queryRaw`SELECT 1`;
+    dbConnection = 'connected';
+  } catch (error) {
+    console.error('Database health check failed:', error);
+    dbConnection = 'error';
+  }
+
   return c.json({
     status: 'ok',
-    timestamp: new Date().toISOString(),
+    timestamp,
     uptime: process.uptime(),
     requestId: c.get('requestId'),
+    dbConnection,
   }, 200);
 });
 
