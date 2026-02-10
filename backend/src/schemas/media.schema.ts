@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { type Prisma, type Media, MediaType } from '@/generated/prisma/client';
 
 export const createMediaSchema = z.object({
+  collectionId: z.uuid().optional().meta( {example: 'col_123'} ),
   title: z.string().min(1).max(300).meta( {example: 'Inception'} ),
   description: z.string().max(1000).optional().meta( {example: 'A thief who steals corporate secrets through dream-sharing technology'} ),
   url: z.url().optional().meta( {example: 'https://example.com/inception'} ),
@@ -10,7 +11,7 @@ export const createMediaSchema = z.object({
   type: z.enum(MediaType).meta( {example: MediaType.FILM} ),
   releaseDate: z.string().datetime().optional().meta( {example: '2010-07-16T00:00:00.000Z'} ).transform(str => str ? new Date(str) : undefined),
   directorAuthor: z.string().max(200).optional().meta( {example: 'Christopher Nolan'} ),
-}) satisfies z.Schema<Prisma.MediaCreateInput>;
+}) satisfies z.Schema<Prisma.MediaCreateInput & { collectionId?: string }>;
 
 export const createMediaResponseSchema = z.object({
   id: z.uuid(),

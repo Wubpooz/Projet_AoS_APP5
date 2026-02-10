@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { describeRoute, resolver, validator } from 'hono-openapi';
 import { mediaService } from '@/services/media.service';
+import type { AuthType } from '@/middleware/auth';
 import { 
   createMediaSchema, 
   createMediaResponseSchema,
@@ -11,7 +12,7 @@ import {
 } from '@/schemas/media.schema';
 import { AppError } from '@/middleware/errorHandler';
 
-export const mediaRoutes = new Hono();
+export const mediaRoutes = new Hono<{ Variables: AuthType }>();
 
 // POST / - Create a new media entry
 mediaRoutes.post(
@@ -19,6 +20,7 @@ mediaRoutes.post(
   describeRoute({
     tags: ['Media'],
     description: 'Create a new media entry',
+    security: [{ bearerAuth: [] }],
     requestBody: {
       required: true,
       content: {
@@ -35,12 +37,21 @@ mediaRoutes.post(
         },
       },
       400: { description: 'Invalid payload' },
+      401: { description: 'Unauthorized' },
+      403: { description: 'Forbidden' },
+      404: { description: 'Collection not found' },
     },
   }),
   validator('json', createMediaSchema),
   async (c) => {
+    const sessionUser = c.get('user');
+    if (!sessionUser) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
     const mediaData = c.req.valid('json');
-    const newMedia = await mediaService.createMedia(mediaData);
+    const { collectionId, ...payload } = mediaData;
+    const newMedia = await mediaService.createMedia(payload, sessionUser.id, collectionId);
     return c.json(newMedia, 201);
   }
 );
@@ -79,7 +90,8 @@ mediaRoutes.get(
   validator('query', getMediaQuerySchema),
   async (c) => {
     const query = c.req.valid('query');
-    const result = await mediaService.listMedia(query);
+    const sessionUser = c.get('user');
+    const result = await mediaService.listMedia(query, sessionUser?.id);
     return c.json(result, 200);
   }
 );
@@ -109,7 +121,8 @@ mediaRoutes.get(
   validator('param', mediaIdParamSchema),
   async (c) => {
     const { mediaId } = c.req.valid('param');
-    const media = await mediaService.getById(mediaId);
+    const sessionUser = c.get('user');
+    const media = await mediaService.getById(mediaId, sessionUser?.id);
     
     if (!media) {
       return c.json({ error: 'Media not found' }, 404);
@@ -126,6 +139,7 @@ mediaRoutes.patch(
   describeRoute({
     tags: ['Media'],
     description: 'Update media fields',
+    security: [{ bearerAuth: [] }],
     parameters: [
       { name: 'mediaId', in: 'path', required: true, schema: { type: 'string' }, example: 'media_123' },
     ],
@@ -145,12 +159,19 @@ mediaRoutes.patch(
         },
       },
       400: { description: 'Invalid payload or no fields to update' },
+      401: { description: 'Unauthorized' },
+      403: { description: 'Forbidden' },
       404: { description: 'Media not found' },
     },
   }),
   validator('param', mediaIdParamSchema),
   validator('json', updateMediaSchema),
   async (c) => {
+    const sessionUser = c.get('user');
+    if (!sessionUser) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
     const { mediaId } = c.req.valid('param');
     const data = c.req.valid('json');
     
@@ -158,7 +179,7 @@ mediaRoutes.patch(
       return c.json({ error: 'No fields to update' }, 400);
     }
     
-    const media = await mediaService.updateById(mediaId, data).catch(() => {
+    const media = await mediaService.updateById(mediaId, data, sessionUser.id).catch(() => {
       throw new AppError('Failed to update media', 500);
     });
     
@@ -177,6 +198,7 @@ mediaRoutes.delete(
   describeRoute({
     tags: ['Media'],
     description: 'Delete media entry (admin/owner)',
+    security: [{ bearerAuth: [] }],
     parameters: [
       { name: 'mediaId', in: 'path', required: true, schema: { type: 'string' }, example: 'media_123' },
     ],
@@ -189,14 +211,21 @@ mediaRoutes.delete(
           },
         },
       },
+      401: { description: 'Unauthorized' },
+      403: { description: 'Forbidden' },
       404: { description: 'Media not found' },
     },
   }),
   validator('param', mediaIdParamSchema),
   async (c) => {
+    const sessionUser = c.get('user');
+    if (!sessionUser) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
     const { mediaId } = c.req.valid('param');
-    
-    const deleted = await mediaService.deleteById(mediaId).catch(() => {
+
+    const deleted = await mediaService.deleteById(mediaId, sessionUser.id).catch(() => {
       throw new AppError('Failed to delete media', 500);
     });
     

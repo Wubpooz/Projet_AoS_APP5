@@ -1,4 +1,5 @@
 import prisma from "@/db";
+import { CollectionRole, Visibility } from "@/generated/prisma/browser";
 import type { Prisma, Media } from "@/generated/prisma/browser";
 import { AppError } from "@/middleware/errorHandler";
 import type { ListQuery, MediaWhereClause, PaginatedData, PaginationLinks } from "@/types/types";
@@ -10,11 +11,28 @@ export const mediaService = {
    * @returns {Promise<Media>} The created media object
    * @throws AppError if media creation fails
    */
-  async createMedia(data: Prisma.MediaCreateInput): Promise<Media> {
+  async createMedia(
+    data: Prisma.MediaCreateInput,
+    userId: string,
+    collectionId?: string
+  ): Promise<Media> {
     try {
-      const newMedia = await prisma.media.create({ data });
+      const collection = await this.getCollectionForCreate(userId, collectionId);
+      const newMedia = await prisma.$transaction(async (tx) => {
+        const media = await tx.media.create({ data });
+        await tx.collectionMedia.create({
+          data: {
+            collectionId: collection.id,
+            mediaId: media.id,
+          },
+        });
+        return media;
+      });
       return newMedia;
     } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
       console.error('Error creating media:', error);
       throw new AppError('Failed to create media', 500);
     }
@@ -28,11 +46,15 @@ export const mediaService = {
    * @param {string} query.type Filter by media type
    * @param {string} query.cursor Cursor for cursor-based pagination
    */
-  async listMedia(query: ListQuery): Promise<PaginatedData<Media>> {
+  async listMedia(query: ListQuery, userId?: string): Promise<PaginatedData<Media>> {
     const pageSize = query.pageSize || 20;
     const sort = query.sort || 'createdAt';
     const order = query.order || 'desc';
-    const where = this.buildWhereClause(query);
+    const filterWhere = this.buildWhereClause(query);
+    const accessWhere = this.buildAccessWhere(userId);
+    const where = Object.keys(filterWhere).length > 0
+      ? { AND: [filterWhere, accessWhere] }
+      : accessWhere;
 
     // Use cursor-based pagination if cursor is provided
     if (query.cursor) {
@@ -123,6 +145,42 @@ export const mediaService = {
     }
 
     return where;
+  },
+
+  /**
+   * Build access control where clause for media visibility
+   * @param {string | undefined} userId Authenticated user ID (optional)
+   * @returns {Prisma.MediaWhereInput} Prisma where clause for access control
+   */
+  buildAccessWhere(userId?: string): Prisma.MediaWhereInput {
+    const publicAccess: Prisma.MediaWhereInput = {
+      collections: {
+        some: {
+          collection: {
+            visibility: Visibility.PUBLIC,
+          },
+        },
+      },
+    };
+
+    if (!userId) {
+      return publicAccess;
+    }
+
+    const memberAccess: Prisma.MediaWhereInput = {
+      collections: {
+        some: {
+          collection: {
+            OR: [
+              { ownerId: userId },
+              { members: { some: { userId } } },
+            ],
+          },
+        },
+      },
+    };
+
+    return { OR: [publicAccess, memberAccess] };
   },
 
   /**
@@ -222,8 +280,16 @@ export const mediaService = {
    * @param {string} id Media ID
    * @returns {Promise<Media | null>} The media object if found, or null if not found
    */
-  async getById(id: string): Promise<Media | null> {
-    return await prisma.media.findUnique({ where: { id } });
+  async getById(id: string, userId?: string): Promise<Media | null> {
+    const accessWhere = this.buildAccessWhere(userId);
+    return await prisma.media.findFirst({
+      where: {
+        AND: [
+          { id },
+          accessWhere,
+        ],
+      },
+    });
   },
 
   /**
@@ -232,11 +298,15 @@ export const mediaService = {
    * @param {Prisma.MediaUpdateInput} data Data to update the media entry with
    * @returns {Promise<Media | null>} The updated media object if successful, or null if an error occurred
    */
-  async updateById(id: string, data: Prisma.MediaUpdateInput): Promise<Media | null> {
+  async updateById(id: string, data: Prisma.MediaUpdateInput, userId: string): Promise<Media | null> {
     try {
+      await this.requireMediaRole(id, userId, [CollectionRole.OWNER, CollectionRole.COLLABORATOR]);
       const media = await prisma.media.update({ where: { id }, data });
       return media;
     } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
       console.error('Error updating media:', error);
       return null;
     }
@@ -247,13 +317,127 @@ export const mediaService = {
    * @param {string} id Media ID
    * @returns {Promise<boolean>} True if the media was successfully deleted, false otherwise
    */
-  async deleteById(id: string): Promise<boolean> {
+  async deleteById(id: string, userId: string): Promise<boolean> {
     try {
+      await this.requireMediaRole(id, userId, [CollectionRole.OWNER]);
       await prisma.media.delete({ where: { id } });
       return true;
     } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
       console.error('Error deleting media:', error);
       return false;
+    }
+  },
+
+  /**
+   * Resolve a collection for media creation, ensuring the user can write to it
+   */
+  async getCollectionForCreate(userId: string, collectionId?: string): Promise<{ id: string }> {
+    if (collectionId) {
+      const collection = await prisma.collection.findUnique({
+        where: { id: collectionId },
+        select: {
+          id: true,
+          ownerId: true,
+          members: {
+            where: { userId },
+            select: { role: true },
+          },
+        },
+      });
+
+      if (!collection) {
+        throw new AppError('Collection not found', 404);
+      }
+
+      const isOwner = collection.ownerId === userId;
+      const allowedCreateRoles = new Set<CollectionRole>([
+        CollectionRole.OWNER,
+        CollectionRole.COLLABORATOR,
+      ]);
+      const hasRole = collection.members.some((member) =>
+        allowedCreateRoles.has(member.role)
+      );
+
+      if (!isOwner && !hasRole) {
+        throw new AppError('Forbidden', 403);
+      }
+
+      return { id: collection.id };
+    }
+
+    return this.getOrCreateDefaultCollection(userId);
+  },
+
+  /**
+   * Ensure every user has a default collection for personal media
+   */
+  async getOrCreateDefaultCollection(userId: string): Promise<{ id: string }> {
+    const existing = await prisma.collection.findFirst({
+      where: { ownerId: userId, name: 'Default' },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return prisma.collection.create({
+      data: {
+        name: 'Default',
+        description: 'Default collection',
+        tags: [],
+        visibility: Visibility.PRIVATE,
+        ownerId: userId,
+      },
+      select: { id: true },
+    });
+  },
+
+  /**
+   * Require a minimum role to update/delete a media entry
+   */
+  async requireMediaRole(
+    mediaId: string,
+    userId: string,
+    allowedRoles: CollectionRole[]
+  ): Promise<void> {
+    const media = await prisma.media.findUnique({
+      where: { id: mediaId },
+      select: {
+        id: true,
+        collections: {
+          select: {
+            collection: {
+              select: {
+                ownerId: true,
+                members: {
+                  where: { userId },
+                  select: { role: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!media) {
+      throw new AppError('Media not found', 404);
+    }
+
+    const isOwner = media.collections.some((item) => item.collection.ownerId === userId);
+    if (isOwner && allowedRoles.includes(CollectionRole.OWNER)) {
+      return;
+    }
+
+    const roles = media.collections.flatMap((item) => item.collection.members.map((member) => member.role));
+    const hasRole = roles.some((role) => allowedRoles.includes(role));
+
+    if (!hasRole) {
+      throw new AppError('Forbidden', 403);
     }
   },
 };
