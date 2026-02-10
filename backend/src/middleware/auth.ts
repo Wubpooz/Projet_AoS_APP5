@@ -42,7 +42,10 @@ export const auth = betterAuth({
         username(),
         bearer(),
         haveIBeenPwned()
-    ]
+    ],
+  logger: {
+    level: "debug"
+  },
 });
 
 

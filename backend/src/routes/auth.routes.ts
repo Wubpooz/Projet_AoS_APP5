@@ -209,7 +209,7 @@ authRoutes.post(
         rememberMe: true,
         // callbackURL:
       },
-      headers: c.req.header(),
+      headers: c.req.raw.headers,
     });
 
     // Set session cookie for browser-based clients
@@ -269,7 +269,7 @@ authRoutes.post(
 
   try {
     await auth.api.signOut({
-      headers: c.req.header(),
+      headers: c.req.raw.headers,
     });
 
     return c.json({ message: 'Logout successful' });
@@ -418,12 +418,7 @@ authRoutes.get(
     },
   }),
   async (c) => {
-    console.log('GET /api/auth/me called');
     const user = c.get('user');
-    console.log('Authenticated user from context:', user);
-    console.log('Request headers:', Object.fromEntries(c.req.raw.headers.entries()));
-    console.log('Bearer token from Authorization header:', c.req.raw.headers.get('Authorization')); // Log the raw Authorization header for debugging
-    console.log('Session info from context:', c.get('session'));
     if (!user) {
       return c.json({ error: 'Unauthorized' }, 401);
     }

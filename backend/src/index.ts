@@ -9,6 +9,7 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { auth, type AuthType } from "./middleware/auth";
 import { errorHandler } from './middleware/errorHandler';
 
+
 import { authRoutes } from './routes/auth.routes.ts';
 import { userRoutes } from './routes/user.routes';
 
@@ -22,9 +23,25 @@ export default app;
 
 
 app.use("*", async (c, next) => {
-  const session = await auth.api.getSession({
-    headers: c.req.raw.headers,
-  });
+  // When both Authorization and Cookie are present, better-auth fails to parse correctly
+  // Prefer Authorization header (bearer token) over cookie when both are present
+  const authorizationHeader = c.req.header('authorization');
+  
+  let session;
+  if (authorizationHeader?.startsWith('Bearer ')) {
+    // Bearer auth: create Headers with ONLY authorization header
+    const headers = new Headers();
+    headers.set('authorization', authorizationHeader);
+    
+    session = await auth.api.getSession({
+      headers: headers,
+    });
+  } else {
+    // Cookie auth: use raw headers (includes cookies)
+    session = await auth.api.getSession({
+      headers: c.req.raw.headers,
+    });
+  }
 
   if (!session) {
     c.set("user", null);
