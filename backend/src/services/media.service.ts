@@ -191,7 +191,7 @@ export const mediaService = {
    */
   parseCommaSeparated(commaSeparated?: string, single?: string): string[] {
     if (commaSeparated) {
-      return commaSeparated.split(',');
+      return commaSeparated.split(',').map(s => s.trim()).filter(Boolean);
     }
     if (single) {
       return [single];
