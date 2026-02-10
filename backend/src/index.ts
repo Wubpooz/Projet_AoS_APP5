@@ -9,7 +9,6 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { auth, type AuthType } from "./middleware/auth";
 import { errorHandler } from './middleware/errorHandler';
 
-
 import { authRoutes } from './routes/auth.routes.ts';
 import { userRoutes } from './routes/user.routes';
 
@@ -23,18 +22,21 @@ export default app;
 
 
 app.use("*", async (c, next) => {
-	const session = await auth.api.getSession({ headers: c.req.raw.headers });
-  	if (!session) {
-    	c.set("user", null);
-    	c.set("session", null);
-    	await next();
-        return;
-  	}
-  	c.set("user", session.user);
-  	c.set("session", session.session);
-  	await next();
-});
+  const session = await auth.api.getSession({
+    headers: c.req.raw.headers,
+  });
 
+  if (!session) {
+    c.set("user", null);
+    c.set("session", null);
+    await next();
+    return;
+  }
+
+  c.set("user", session.user);
+  c.set("session", session.session);
+  await next();
+});
 
 // ==================== Security configurations ====================
 app.use(
@@ -43,7 +45,7 @@ app.use(
 		origin: "http://localhost:3000",
 		allowHeaders: ["Content-Type", "Authorization"],
 		allowMethods: ["POST", "GET", "PATCH", "DELETE", "OPTIONS"],
-		exposeHeaders: ["Content-Length"],
+		exposeHeaders: ["Content-Length", "set-auth-token"],
 		maxAge: 600,
 		credentials: true
 	})
@@ -65,7 +67,6 @@ if (process.env.NODE_ENV === 'production') {
 // Request ID and logging
 app.use('*', requestId());
 app.use('*', requestLogger);
-
 
 
 // ==================== Routes ====================
@@ -101,14 +102,22 @@ app.get(
       ],
       components: {
         securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            description: 'Session token obtained from login response (set-auth-token header or sessionToken field)',
+          },
           sessionCookie: {
             type: 'apiKey',
             in: 'cookie',
             name: 'better-auth.session_token',
-            description: 'Better-Auth session cookie',
+            description: 'Better-Auth session cookie (set automatically by browser)',
           },
         },
       },
+      security: [
+        { bearerAuth: [] },
+      ],
     },
     includeEmptyPaths: true,
   })

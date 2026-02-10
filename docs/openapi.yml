@@ -23,14 +23,24 @@
   ],
   "components": {
     "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Session token obtained from login response (set-auth-token header or sessionToken field)"
+      },
       "sessionCookie": {
         "type": "apiKey",
         "in": "cookie",
         "name": "better-auth.session_token",
-        "description": "Better-Auth session cookie"
+        "description": "Better-Auth session cookie (set automatically by browser)"
       }
     }
   },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "paths": {
     "/openapi": {
       "get": {
@@ -80,10 +90,12 @@
                   "password": {
                     "type": "string",
                     "minLength": 8,
-                    "description": "User password (minimum 8 characters)"
+                    "description": "User password (minimum 8 characters)",
+                    "example": "pozajaopjioeahifohaieofae"
                   },
                   "name": {
                     "description": "User display name",
+                    "example": "John Doe",
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 200
@@ -136,7 +148,7 @@
         "tags": [
           "Auth"
         ],
-        "description": "Log in with credentials and receive a session cookie",
+        "description": "Log in with credentials. Copy the sessionToken from response, click Authorize 🔓 at the top, and paste it in the bearerAuth field to authenticate other endpoints.",
         "requestBody": {
           "required": true,
           "content": {
@@ -154,7 +166,8 @@
                   "password": {
                     "type": "string",
                     "minLength": 8,
-                    "description": "User password"
+                    "description": "User password",
+                    "example": "pozajaopjioeahifohaieofae"
                   }
                 },
                 "required": [
@@ -193,7 +206,13 @@
             },
             "headers": {
               "Set-Cookie": {
-                "description": "Session cookie set by Better-Auth",
+                "description": "Session cookie set for browser-based clients",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "set-auth-token": {
+                "description": "Session token for Bearer authentication (use as: Authorization: Bearer <token>)",
                 "schema": {
                   "type": "string"
                 }
@@ -215,16 +234,10 @@
         "tags": [
           "Auth"
         ],
-        "description": "Log out and revoke the session cookie",
-        "parameters": [
+        "description": "Log out and revoke the current session",
+        "security": [
           {
-            "name": "better-auth.session_token",
-            "in": "cookie",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Better-Auth session cookie"
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -344,7 +357,8 @@
                   "newPassword": {
                     "type": "string",
                     "minLength": 8,
-                    "description": "New password (minimum 8 characters)"
+                    "description": "New password (minimum 8 characters)",
+                    "example": "newpassword123"
                   }
                 },
                 "required": [
@@ -395,15 +409,9 @@
           "Auth"
         ],
         "description": "Get the authenticated user profile and session info",
-        "parameters": [
+        "security": [
           {
-            "name": "better-auth.session_token",
-            "in": "cookie",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Better-Auth session cookie"
+            "bearerAuth": []
           }
         ],
         "responses": {

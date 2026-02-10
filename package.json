@@ -10,6 +10,7 @@
     "prisma:generate": "cd backend && bunx --bun prisma generate",
     "prisma:migrate": "cd backend && bunx --bun prisma migrate dev",
     "prisma:seed": "bun run backend/src/db/seed.ts",
+    "prisma:studio": "cd backend && bunx --bun prisma studio",
     "openapi:generate": "bun run backend/scripts/generate-openapi.ts",
     "setup:db": "docker run --name aos-postgres -e POSTGRES_USER=johndoe -e POSTGRES_PASSWORD=randompassword -e POSTGRES_DB=mydb -p 5432:5432 -d postgres:16 || docker start aos-postgres",
     "setup:env": "powershell -Command \"(Get-Content backend\\.env) -replace '^DATABASE_URL=.*', 'DATABASE_URL=postgresql://johndoe:randompassword@localhost:5432/mydb' | Set-Content backend\\.env\"",

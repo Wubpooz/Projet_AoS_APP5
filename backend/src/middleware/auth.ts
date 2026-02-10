@@ -1,9 +1,9 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { haveIBeenPwned, bearer, username } from "better-auth/plugins";
 
 import prisma from '../db/index';
 import env from '../../env';
-import { username } from "better-auth/plugins/username";
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -39,7 +39,9 @@ export const auth = betterAuth({
     }
   },
     plugins: [ 
-        username() 
+        username(),
+        bearer(),
+        haveIBeenPwned()
     ]
 });
 

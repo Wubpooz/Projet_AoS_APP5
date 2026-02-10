@@ -50,13 +50,13 @@ const resolveApiErrorStatus = (error: APIError): ErrorStatusCode => {
 
 const registerBodySchema = z.object({
   email: z.email().describe('User email address').meta({ example: 'user@example.com' }), // without meta, generates random string (zod-to-openapi does not generate examples for z.string().email() (v3 or v4). It only maps the format.)
-  password: z.string().min(8).describe('User password (minimum 8 characters)'),
-  name: z.string().min(1).max(200).optional().describe('User display name'),
+  password: z.string().min(8).describe('User password (minimum 8 characters)').meta({ example: 'pozajaopjioeahifohaieofae' }),
+  name: z.string().min(1).max(200).optional().describe('User display name').meta({ example: 'John Doe' }),
 });
 
 const loginBodySchema = z.object({
   email: z.email().describe('User email address').meta({ example: 'user@example.com' }),
-  password: z.string().min(8).describe('User password'),
+  password: z.string().min(8).describe('User password').meta({ example: 'pozajaopjioeahifohaieofae'}),
 });
 
 const messageResponseSchema = z.object({
@@ -72,7 +72,7 @@ const forgotPasswordBodySchema = z.object({
 
 const resetPasswordBodySchema = z.object({
   token: z.string().min(1).describe('Password reset token'),
-  newPassword: z.string().min(8).describe('New password (minimum 8 characters)'),
+  newPassword: z.string().min(8).describe('New password (minimum 8 characters)').meta({ example: 'newpassword123' }),
 });
 
 
@@ -149,7 +149,7 @@ authRoutes.post(
   '/login',
   describeRoute({
     tags: ['Auth'],
-    description: 'Log in with credentials and receive a session cookie',
+    description: 'Log in with credentials. Copy the sessionToken from response, click Authorize 🔓 at the top, and paste it in the bearerAuth field to authenticate other endpoints.',
     requestBody: {
       required: true,
       content: {
@@ -173,7 +173,11 @@ authRoutes.post(
         },
         headers: {
           'Set-Cookie': {
-            description: 'Session cookie set by Better-Auth',
+            description: 'Session cookie set for browser-based clients',
+            schema: { type: 'string' },
+          },
+          'set-auth-token': {
+            description: 'Session token for Bearer authentication (use as: Authorization: Bearer <token>)',
             schema: { type: 'string' },
           },
         },
@@ -205,9 +209,10 @@ authRoutes.post(
         rememberMe: true,
         // callbackURL:
       },
-      headers: c.req.raw.headers,
+      headers: c.req.header(),
     });
 
+    // Set session cookie for browser-based clients
     const isDev = process.env.NODE_ENV !== 'production';
     if (result.token) {
       const cookieParts = [
@@ -216,18 +221,17 @@ authRoutes.post(
         'HttpOnly',
         `SameSite=${isDev ? 'Lax' : 'None'}`,
       ];
-
-      if (!isDev) {
-        cookieParts.push('Secure');
-      }
-
+      if (!isDev) cookieParts.push('Secure');
       c.header('Set-Cookie', cookieParts.join('; '));
+
+      // Bearer plugin convention — clients read this header to store the token
+      c.header('set-auth-token', result.token);
     }
 
     return c.json({
       message: 'Login successful',
       user: result.user,
-      ...(isDev ? { sessionToken: result.token } : {}),
+      sessionToken: result.token,  // token for Bearer auth (Authorization: Bearer <token>)
     });
   } catch (error) {
     if (error instanceof APIError) {
@@ -242,16 +246,8 @@ authRoutes.post(
   '/logout',
   describeRoute({
     tags: ['Auth'],
-    description: 'Log out and revoke the session cookie',
-    parameters: [
-      {
-        name: 'better-auth.session_token',
-        in: 'cookie',
-        required: true,
-        schema: { type: 'string' },
-        description: 'Better-Auth session cookie',
-      },
-    ],
+    description: 'Log out and revoke the current session',
+    security: [{ bearerAuth: [] }],
     responses: {
       200: {
         description: 'Logout result',
@@ -273,7 +269,7 @@ authRoutes.post(
 
   try {
     await auth.api.signOut({
-      headers: c.req.raw.headers,
+      headers: c.req.header(),
     });
 
     return c.json({ message: 'Logout successful' });
@@ -403,15 +399,7 @@ authRoutes.get(
   describeRoute({
     tags: ['Auth'],
     description: 'Get the authenticated user profile and session info',
-    parameters: [
-      {
-        name: 'better-auth.session_token',
-        in: 'cookie',
-        required: true,
-        schema: { type: 'string' },
-        description: 'Better-Auth session cookie',
-      },
-    ],
+    security: [{ bearerAuth: [] }],
     responses: {
       200: {
         description: 'Authenticated user profile and session info',
@@ -430,7 +418,12 @@ authRoutes.get(
     },
   }),
   async (c) => {
+    console.log('GET /api/auth/me called');
     const user = c.get('user');
+    console.log('Authenticated user from context:', user);
+    console.log('Request headers:', Object.fromEntries(c.req.raw.headers.entries()));
+    console.log('Bearer token from Authorization header:', c.req.raw.headers.get('Authorization')); // Log the raw Authorization header for debugging
+    console.log('Session info from context:', c.get('session'));
     if (!user) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
