@@ -50,10 +50,13 @@ app.use(
 	})
 );
 
-app.use(csrf({
-	origin: ["http://localhost:3000"],
-  secFetchSite: ['same-origin', 'same-site']
-}));
+// CSRF protection - disabled for Swagger UI in development
+if (process.env.NODE_ENV === 'production') {
+  app.use(csrf({
+    origin: ["http://localhost:3000"],
+    secFetchSite: ['same-origin', 'same-site']
+  }));
+}
 
 
 // Rate limiting

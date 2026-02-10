@@ -5,6 +5,8 @@ import prisma from '../db/index';
 import env from '../../env';
 import { username } from "better-auth/plugins/username";
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   database: prismaAdapter(prisma, {
@@ -31,9 +33,9 @@ export const auth = betterAuth({
   },
   advanced: {
     defaultCookieAttributes: {
-      sameSite: "none",
-      secure: true,
-      partitioned: true // New browser standards will mandate this for foreign cookies
+      sameSite: isDev ? "lax" : "none",
+      secure: !isDev,
+      ...(isDev ? {} : { partitioned: true })
     }
   },
     plugins: [ 

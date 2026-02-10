@@ -163,16 +163,6 @@ authRoutes.post(
   describeRoute({
     tags: ['Auth'],
     description: 'Log in with credentials and receive a session cookie',
-    parameters: [
-      {
-        name: 'Authorization',
-        in: 'header',
-        required: true,
-        schema: { type: 'string' },
-        description: 'Authorization header for login (e.g. Basic or Bearer token)',
-        example: 'Bearer <token>',
-      },
-    ],
     requestBody: {
       required: true,
       content: {
@@ -201,15 +191,12 @@ authRoutes.post(
           },
         },
       },
-      400: { description: 'Missing Authorization header or invalid content type' },
+      400: { description: 'Invalid content type' },
       401: { description: 'Invalid credentials' },
     },
   }),
   validator('json', loginBodySchema),
   async (c) => {
-  if (!c.req.raw.headers.get('Authorization')) {
-    return c.json({ error: 'Missing Authorization header' }, 400);
-  }
   if (!c.req.raw.headers.get('Content-Type')?.includes('application/json')) {
     return c.json({ error: 'Content-Type must be application/json' }, 400);
   }
