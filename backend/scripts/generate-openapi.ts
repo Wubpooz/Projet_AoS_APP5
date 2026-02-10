@@ -14,7 +14,17 @@ if (!response.ok) {
 }
 
 const output = await response.text();
+let formattedOutput = output;
+
+try {
+  const parsed = JSON.parse(output) as unknown;
+  formattedOutput = `${JSON.stringify(parsed, null, 2)}\n`;
+} catch {
+  if (!output.endsWith('\n')) {
+    formattedOutput = `${output}\n`;
+  }
+}
 const targetPath = new URL('../../docs/openapi.yml', import.meta.url);
-await writeFile(targetPath, output);
+await writeFile(targetPath, formattedOutput);
 
 console.log(`OpenAPI spec written to ${targetPath.pathname}`);
