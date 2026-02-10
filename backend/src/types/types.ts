@@ -31,4 +31,5 @@ export type PaginatedData<T> = {
   total: number;
   pages: number;
   links: PaginationLinks;
+  cursor?: string | null;
 }

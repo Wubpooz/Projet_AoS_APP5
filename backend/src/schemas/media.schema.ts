@@ -68,5 +68,6 @@ export const mediaListResponseSchema = z.object({
     next: z.string().nullable().meta( {example: '/api/media?page=2&pageSize=20'} ),
     prev: z.string().nullable().meta( {example: null} ),
   }),
+  cursor: z.string().nullable().optional().meta( {example: 'uuid-of-last-item'} ),
 });
 

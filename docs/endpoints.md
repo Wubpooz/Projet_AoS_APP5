@@ -2,37 +2,6 @@
 
 **Access control: owner, collaborator, reader roles on collections.**
 
-**Media**
-- `POST /media` : create media entry
-- `GET /media` : list media with pagination, filtering, sorting, and navigation
-  - Query parameters:
-    - page (default 1), pageSize (default 20)
-    - type (FILM|SERIES|BOOK|ARTICLE|OTHER)
-    - tag (repeatable) or tags (comma-separated)
-    - platform (repeatable) or platforms (comma-separated)
-    - q (search in title/description)
-    - sort (createdAt|title|releaseDate)
-    - order (asc|desc)
-    - cursor (optional, for cursor navigation)
-  - Example request:
-    - `GET /media?page=1&pageSize=10&type=FILM&tag=sci-fi&platform=netflix&sort=releaseDate&order=desc`
-  - Example response:
-    - {
-        "data": [ { "id": "...", "title": "...", "type": "FILM" } ],
-        "page": 1,
-        "pageSize": 10,
-        "total": 124,
-        "pages": 13,
-        "links": {
-          "self": "/api/media?page=1&pageSize=10&type=FILM&tag=sci-fi&platform=netflix",
-          "next": "/api/media?page=2&pageSize=10&type=FILM&tag=sci-fi&platform=netflix",
-          "prev": null
-        }
-      }
-- `GET /media/:mediaId` : get media details
-- `PATCH /media/:mediaId` : update media fields
-- `DELETE /media/:mediaId` : delete media (admin/owner)
-
 
 
 **Collections**

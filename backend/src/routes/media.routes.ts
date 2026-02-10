@@ -51,19 +51,19 @@ mediaRoutes.get(
   '/',
   describeRoute({
     tags: ['Media'],
-    description: 'Retrieve media entries with pagination, filtering, sorting, and navigation',
+    description: 'Retrieve media entries with pagination, filtering, sorting, and navigation. Supports both offset-based (page/pageSize) and cursor-based (cursor) pagination.',
     parameters: [
-      { name: 'page', in: 'query', schema: { type: 'number' }, example: 1 },
-      { name: 'pageSize', in: 'query', schema: { type: 'number' }, example: 20 },
+      { name: 'page', in: 'query', schema: { type: 'number' }, example: 1, description: 'Page number for offset-based pagination' },
+      { name: 'pageSize', in: 'query', schema: { type: 'number' }, example: 20, description: 'Number of items per page' },
       { name: 'type', in: 'query', schema: { type: 'string', enum: ['FILM', 'SERIES', 'BOOK', 'ARTICLE', 'OTHER'] } },
       { name: 'tag', in: 'query', schema: { type: 'string' }, example: 'sci-fi' },
       { name: 'tags', in: 'query', schema: { type: 'string' }, example: 'sci-fi,thriller' },
       { name: 'platform', in: 'query', schema: { type: 'string' }, example: 'Netflix' },
       { name: 'platforms', in: 'query', schema: { type: 'string' }, example: 'Netflix,Amazon Prime' },
-      { name: 'q', in: 'query', schema: { type: 'string' }, example: 'inception' },
+      { name: 'q', in: 'query', schema: { type: 'string' }, example: 'inception', description: 'Search in title/description' },
       { name: 'sort', in: 'query', schema: { type: 'string', enum: ['createdAt', 'title', 'releaseDate'] } },
       { name: 'order', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'] } },
-      { name: 'cursor', in: 'query', schema: { type: 'string' } },
+      { name: 'cursor', in: 'query', schema: { type: 'string' }, description: 'Cursor for cursor-based pagination (use instead of page)' },
     ],
     responses: {
       200: {

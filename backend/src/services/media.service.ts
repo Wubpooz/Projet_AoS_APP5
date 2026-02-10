@@ -26,15 +26,46 @@ export const mediaService = {
    * @param {number} query.page Page number for pagination
    * @param {number} query.pageSize Number of items per page
    * @param {string} query.type Filter by media type
+   * @param {string} query.cursor Cursor for cursor-based pagination
    */
   async listMedia(query: ListQuery): Promise<PaginatedData<Media>> {
-    const page = query.page || 1;
     const pageSize = query.pageSize || 20;
-    const skip = (page - 1) * pageSize;
     const sort = query.sort || 'createdAt';
     const order = query.order || 'desc';
-
     const where = this.buildWhereClause(query);
+
+    // Use cursor-based pagination if cursor is provided
+    if (query.cursor) {
+      const data = await prisma.media.findMany({
+        where,
+        take: pageSize + 1, // Fetch one extra to check if there's a next page
+        cursor: { id: query.cursor },
+        skip: 1, // Skip the cursor itself
+        orderBy: { [sort]: order },
+      });
+
+      const hasMore = data.length > pageSize;
+      const items = hasMore ? data.slice(0, pageSize) : data;
+      const lastItem = items.at(-1);
+      const nextCursor = hasMore && lastItem ? lastItem.id : null;
+
+      // For cursor-based pagination, we don't calculate total/pages as it's expensive
+      const links = this.buildCursorPaginationLinks(query, pageSize, nextCursor);
+
+      return {
+        data: items,
+        page: 1, // Cursor pagination doesn't use page numbers
+        pageSize,
+        total: 0, // Not calculated for cursor pagination
+        pages: 0, // Not calculated for cursor pagination
+        links,
+        cursor: nextCursor,
+      };
+    }
+
+    // Fall back to offset-based pagination
+    const page = query.page || 1;
+    const skip = (page - 1) * pageSize;
 
     const [data, total] = await Promise.all([
       prisma.media.findMany({
@@ -47,6 +78,8 @@ export const mediaService = {
     ]);
 
     const pages = Math.ceil(total / pageSize);
+    const lastItem = data.at(-1);
+    const nextCursor = lastItem ? lastItem.id : null;
     const links = this.buildPaginationLinks(query, page, pageSize, pages);
 
     return {
@@ -56,6 +89,7 @@ export const mediaService = {
       total,
       pages,
       links,
+      cursor: nextCursor,
     };
   },
 
@@ -139,6 +173,47 @@ export const mediaService = {
       self: buildLink(page),
       next: page < pages ? buildLink(page + 1) : null,
       prev: page > 1 ? buildLink(page - 1) : null,
+    };
+  },
+
+  /**
+   * Build cursor-based pagination links for API responses
+   * @param {ListQuery} query Query parameters for filtering and pagination
+   * @param {number} pageSize Number of items per page
+   * @param {string | null} nextCursor Cursor for the next page
+   * @returns {PaginationLinks} An object containing self, next, and prev pagination links
+   */
+  buildCursorPaginationLinks(query: ListQuery, pageSize: number, nextCursor: string | null): PaginationLinks {
+    const baseUrl = '/api/media';
+    const queryParams = new URLSearchParams();
+    
+    if (query.type) queryParams.set('type', query.type);
+    if (query.tag) queryParams.set('tag', query.tag);
+    if (query.tags) queryParams.set('tags', query.tags);
+    if (query.platform) queryParams.set('platform', query.platform);
+    if (query.platforms) queryParams.set('platforms', query.platforms);
+    if (query.q) queryParams.set('q', query.q);
+    if (query.sort) queryParams.set('sort', query.sort);
+    if (query.order) queryParams.set('order', query.order);
+    queryParams.set('pageSize', pageSize.toString());
+
+    const buildSelfLink = () => {
+      const params = new URLSearchParams(queryParams);
+      if (query.cursor) params.set('cursor', query.cursor);
+      return `${baseUrl}?${params.toString()}`;
+    };
+
+    const buildNextLink = () => {
+      if (!nextCursor) return null;
+      const params = new URLSearchParams(queryParams);
+      params.set('cursor', nextCursor);
+      return `${baseUrl}?${params.toString()}`;
+    };
+
+    return {
+      self: buildSelfLink(),
+      next: buildNextLink(),
+      prev: null, // Cursor-based pagination typically doesn't support prev
     };
   },
 

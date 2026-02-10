@@ -1185,7 +1185,7 @@
         "tags": [
           "Media"
         ],
-        "description": "Retrieve media entries with pagination, filtering, sorting, and navigation",
+        "description": "Retrieve media entries with pagination, filtering, sorting, and navigation. Supports both offset-based (page/pageSize) and cursor-based (cursor) pagination.",
         "parameters": [
           {
             "in": "query",
@@ -1489,6 +1489,17 @@
                         "self",
                         "next",
                         "prev"
+                      ]
+                    },
+                    "cursor": {
+                      "example": "uuid-of-last-item",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
                       ]
                     }
                   },
