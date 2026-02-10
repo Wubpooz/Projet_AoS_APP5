@@ -48,17 +48,21 @@ Notes:
 
 &nbsp;  
 ## P1
-- [ ] Database schema
-- [ ] Database seeding
+- [x] Database schema
+- [x] Database seeding
 - [ ] API endpoints for CRUD operations on Media, Collections, and Users (with all HTTP verbs, pagination, filtering, navigation, validation)
   - [x] Setup Hono et Bun (with routes, validation, error handling)
+  - [x] Authentification endpoints working
   - [ ] Implement API endpoints (CRUD for Media, Collections, Users)
+    - [ ] Users: 
+    - [ ] Media: 
+    - [ ] Collections: 
   - [ ] Implement pagination, filtering, and navigation for listing endpoints
-  - [ ] Implement validation with Zod for request bodies and query parameters
+  - [x] Implement validation with Zod for request bodies and query parameters
 - [x] Setup Better-auth
 - [ ] Dockerize
 - [ ] Tests (unitaires, postman)
-- [ ] OpenAPI
+- [x] OpenAPI
 
 ## P2
 - [ ] gestion des droits d'accès (collaborateurs, lecteurs)
@@ -75,7 +79,7 @@ Notes:
 ## P4 (bonus bonus)
 - [ ] Recommandations basées sur les tags et les notes
 - [ ] Intégration avec des APIs externes (ex: IMDb, Goodreads, etc.)
-- [ ] Rate limiting
+- [x] Rate limiting
 
 
 &nbsp;  
