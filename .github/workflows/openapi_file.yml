@@ -6,6 +6,9 @@ on:
       - main
       - '**'
 
+permissions:
+  contents: read
+
 jobs:
   openapi:
     runs-on: ubuntu-latest
