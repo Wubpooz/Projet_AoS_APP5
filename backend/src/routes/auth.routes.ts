@@ -5,8 +5,9 @@ import { APIError } from 'better-auth/api';
 import { AppError } from '@/middleware/errorHandler';
 import { auth } from '@/middleware/auth';
 import type { AuthType } from '@/middleware/auth';
+import { type ContentfulStatusCode } from 'hono/utils/http-status';
 
-type ErrorStatusCode = 400 | 401 | 500;
+type ErrorStatusCode = ContentfulStatusCode;
 
 export const authRoutes = new Hono<{ Variables: AuthType }>();
 
@@ -21,15 +22,31 @@ const createAuthError = (fallbackMessage: string, error: unknown) => {
   return new AppError(message, 500, error);
 };
 
-const authStatusResponseSchema = z.object({
-  authenticated: z.boolean(),
-  user: z.unknown().nullable(),
-  session: z.unknown().nullable(),
-});
+const resolveApiErrorStatus = (error: APIError): ErrorStatusCode => {
+  const rawStatus = (error as { statusCode?: number | string; status?: number | string }).statusCode
+    ?? (error as { status?: number | string }).status;
 
-const authStatusQuerySchema = z.object({
-  includeSession: z.enum(['true', 'false']).optional(),
-});
+  if (typeof rawStatus === 'number') {
+    return rawStatus as ErrorStatusCode;
+  }
+
+  if (typeof rawStatus === 'string') {
+    const statusMap: Record<string, ErrorStatusCode> = {
+      BAD_REQUEST: 400,
+      UNAUTHORIZED: 401,
+      FORBIDDEN: 403,
+      NOT_FOUND: 404,
+      CONFLICT: 409,
+      UNPROCESSABLE_ENTITY: 422,
+      TOO_MANY_REQUESTS: 429,
+      INTERNAL_SERVER_ERROR: 500,
+    };
+
+    return statusMap[rawStatus] ?? 500;
+  }
+
+  return 500;
+};
 
 const registerBodySchema = z.object({
   email: z.email().describe('User email address').meta({ example: 'user@example.com' }), // without meta, generates random string (zod-to-openapi does not generate examples for z.string().email() (v3 or v4). It only maps the format.)
@@ -46,52 +63,20 @@ const messageResponseSchema = z.object({
   message: z.string(),
   user: z.unknown().optional(),
   session: z.unknown().optional(),
+  sessionToken: z.string().optional(),
 });
 
-authRoutes.get(
-  '/status',
-  describeRoute({
-    tags: ['Auth'],
-    description: 'Check authentication status from the session cookie',
-    parameters: [
-      {
-        name: 'includeSession',
-        in: 'query',
-        required: false,
-        schema: { type: 'string', enum: ['true', 'false'] },
-        description: 'Whether to include session details in the response',
-        example: 'true',
-      },
-    ],
-    responses: {
-      200: {
-        description: 'Authentication status',
-        content: {
-          'application/json': {
-            schema: resolver(authStatusResponseSchema),
-            example: {
-              authenticated: true,
-              user: { id: 'user_123', email: 'user@example.com' },
-              session: { id: 'session_123', expiresAt: '2026-01-01T00:00:00.000Z' },
-            },
-          },
-        },
-      },
-    },
-  }),
-  validator('query', authStatusQuerySchema),
-  async (c) => {
-  const query = c.req.valid('query');
-  const includeSession = query.includeSession !== 'false';
-  const user = c.get('user');
-  const session = c.get('session');
-  return c.json({
-    authenticated: !!user,
-    user,
-    session: includeSession ? session : null,
-  });
-  }
-);
+const forgotPasswordBodySchema = z.object({
+  email: z.email().describe('User email address').meta({ example: 'user@example.com' }),
+});
+
+const resetPasswordBodySchema = z.object({
+  token: z.string().min(1).describe('Password reset token'),
+  newPassword: z.string().min(8).describe('New password (minimum 8 characters)'),
+});
+
+
+
 
 authRoutes.post(
   '/register',
@@ -137,11 +122,13 @@ authRoutes.post(
   const body = c.req.valid('json');
 
   try {
+    // auth.api.isUsernameAvailable({ query: { username: body.username } }) // optionally check username availability before registration
     const result = await auth.api.signUpEmail({
       body: {
         email: body.email,
         password: body.password,
         name: body.name ?? body.email.split('@')[0] ?? 'User',
+        // callbackURL:
       },
     });
 
@@ -151,7 +138,7 @@ authRoutes.post(
     });
   } catch (error) {
     if (error instanceof APIError) {
-      throw new AppError(error.message, error.status as ErrorStatusCode);
+      throw new AppError(error.message, resolveApiErrorStatus(error));
     }
     throw createAuthError('Registration failed', error);
   }
@@ -215,16 +202,36 @@ authRoutes.post(
       body: {
         email: body.email,
         password: body.password,
+        rememberMe: true,
+        // callbackURL:
       },
+      headers: c.req.raw.headers,
     });
+
+    const isDev = process.env.NODE_ENV !== 'production';
+    if (result.token) {
+      const cookieParts = [
+        `better-auth.session_token=${result.token}`,
+        'Path=/',
+        'HttpOnly',
+        `SameSite=${isDev ? 'Lax' : 'None'}`,
+      ];
+
+      if (!isDev) {
+        cookieParts.push('Secure');
+      }
+
+      c.header('Set-Cookie', cookieParts.join('; '));
+    }
 
     return c.json({
       message: 'Login successful',
       user: result.user,
+      ...(isDev ? { sessionToken: result.token } : {}),
     });
   } catch (error) {
     if (error instanceof APIError) {
-      throw new AppError(error.message, error.status as ErrorStatusCode);
+      throw new AppError(error.message, resolveApiErrorStatus(error));
     }
     throw createAuthError('Login failed', error);
   }
@@ -238,7 +245,7 @@ authRoutes.post(
     description: 'Log out and revoke the session cookie',
     parameters: [
       {
-        name: 'better-auth.session',
+        name: 'better-auth.session_token',
         in: 'cookie',
         required: true,
         schema: { type: 'string' },
@@ -272,9 +279,175 @@ authRoutes.post(
     return c.json({ message: 'Logout successful' });
   } catch (error) {
     if (error instanceof APIError) {
-      throw new AppError(error.message, error.status as ErrorStatusCode);
+      throw new AppError(error.message, resolveApiErrorStatus(error));
     }
     throw createAuthError('Logout failed', error);
   }
+  }
+);
+
+
+authRoutes.post(
+  '/forgot-password',
+  describeRoute({
+    tags: ['Auth'],
+    description: 'Initiate password reset process by sending a reset email',
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          example: {
+            email: 'user@example.com',
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Password reset email sent',
+        content: {
+          'application/json': {
+            schema: resolver(messageResponseSchema),
+            example: { message: 'Password reset email sent' },
+          },
+        },
+      },
+      400: { description: 'Invalid payload or content type' },
+    },
+  }),
+  validator('json', forgotPasswordBodySchema),
+  async (c) => {
+  if (!c.req.raw.headers.get('Content-Type')?.includes('application/json')) {
+    return c.json({ error: 'Content-Type must be application/json' }, 400);
+  }
+
+  const body = c.req.valid('json');
+
+  try {
+    await auth.api.requestPasswordReset({
+      body: {
+        email: body.email,
+        // redirectTo: "https://localhost:5174/reset-password",
+      },
+    });
+    return c.json({ message: 'Password reset email sent' });
+  } catch (error) {
+    if (error instanceof APIError) {
+      throw new AppError(error.message, resolveApiErrorStatus(error));
+    }
+    throw createAuthError('Password reset failed', error);
+  }
+  }
+);
+
+
+authRoutes.post(
+  '/reset-password',
+  describeRoute({
+    tags: ['Auth'],
+    description: 'Complete password reset process by providing new password and reset token',
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          example: {
+            token: 'reset_token_here',
+            newPassword: 'newpassword123',
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Password reset successful',
+        content: {
+          'application/json': {
+            schema: resolver(messageResponseSchema),
+            example: { message: 'Password reset successful' },
+          },
+        },
+      },
+      400: { description: 'Invalid payload or content type' },
+    },
+  }),
+  validator('json', resetPasswordBodySchema),
+  async (c) => {
+    if (!c.req.raw.headers.get('Content-Type')?.includes('application/json')) {
+      return c.json({ error: 'Content-Type must be application/json' }, 400);
+    }
+
+    const body = c.req.valid('json');
+
+    try {
+      await auth.api.resetPassword({
+        body: {
+          token: body.token,
+          newPassword: body.newPassword,
+        },
+      });
+      return c.json({ message: 'Password reset successful' });
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw new AppError(error.message, resolveApiErrorStatus(error));
+      }
+      throw createAuthError('Password reset failed', error);
+    }
+  }
+);
+
+
+
+
+authRoutes.get(
+  '/me',
+  describeRoute({
+    tags: ['Auth'],
+    description: 'Get the authenticated user profile and session info',
+    parameters: [
+      {
+        name: 'better-auth.session_token',
+        in: 'cookie',
+        required: true,
+        schema: { type: 'string' },
+        description: 'Better-Auth session cookie',
+      },
+    ],
+    responses: {
+      200: {
+        description: 'Authenticated user profile and session info',
+        content: {
+          'application/json': {
+            schema: resolver(messageResponseSchema),
+            example: {
+              message: 'Authenticated user profile and session info',
+              user: { id: 'user_123', email: 'user@example.com' },
+              session: { id: 'session_123', expiresAt: '2026-01-01T00:00:00.000Z' },
+            },
+          },
+        },
+      },
+      401: { description: 'Unauthorized' },
+    },
+  }),
+  async (c) => {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    try {
+      const session = c.get('session');
+
+      return c.json({
+        message: 'Authenticated user profile and session info',
+        user,
+        session,
+      });
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw new AppError(error.message, resolveApiErrorStatus(error));
+      }
+      throw createAuthError('Failed to get authenticated user profile and session info', error);
+    }
   }
 );

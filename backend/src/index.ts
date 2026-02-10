@@ -8,7 +8,6 @@ import { swaggerUI } from '@hono/swagger-ui';
 
 import { auth, type AuthType } from "./middleware/auth";
 import { errorHandler } from './middleware/errorHandler';
-// import { standardRateLimiter } from './middleware/rateLimiter';
 
 
 import { authRoutes } from './routes/auth.routes.ts';
@@ -105,7 +104,7 @@ app.get(
           sessionCookie: {
             type: 'apiKey',
             in: 'cookie',
-            name: 'better-auth.session',
+            name: 'better-auth.session_token',
             description: 'Better-Auth session cookie',
           },
         },
@@ -120,6 +119,7 @@ app.get(
   swaggerUI({
     url: '/openapi',
     title: 'Media Collection API Docs',
+    withCredentials: true,
   })
 );
 

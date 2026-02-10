@@ -1,30 +1,5 @@
 # API Endpoints Proposal
 
-Goal: backend for multi-platform watch lists with collaboration, auth, and media/collection management.
-
-Base URL: /api
-Auth: Bearer JWT (via Better-Auth sessions)
-
-## Auth
-- POST /auth/register
-  - Features: create account, email verification trigger
-  - Example request:
-    - body: { "email": "user@example.com", "password": "secret", "name": "User" }
-- POST /auth/login
-  - Features: session creation, token return
-  - Example response:
-    - { "accessToken": "...", "refreshToken": "..." }
-- POST /auth/logout
-  - Features: revoke session
-- GET /auth/me
-  - Features: current user profile
-- POST /auth/verify-email
-  - Features: confirm email token
-- POST /auth/forgot-password
-  - Features: send reset token
-- POST /auth/reset-password
-  - Features: reset password with token
-
 ## Users
 - GET /users/me
   - Features: profile details, counts, settings
