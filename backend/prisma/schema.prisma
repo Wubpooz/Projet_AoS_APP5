@@ -113,6 +113,7 @@ model Media {
   directorAuthor String?   @map("director_author")
   tags           String[]
   platforms      String[]
+  url            String?
   scores         Json?
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
