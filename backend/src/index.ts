@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { requestId } from 'hono/request-id';
-import { logger } from 'hono/logger';
+import { requestLogger } from './middleware/requestLogger';
 import { openAPIRouteHandler } from 'hono-openapi';
 import { swaggerUI } from '@hono/swagger-ui';
 
@@ -50,10 +50,6 @@ app.use(
 	})
 );
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => {
-	return auth.handler(c.req.raw);
-});
-
 app.use(csrf({
 	origin: ["http://localhost:3000"],
   secFetchSite: ['same-origin', 'same-site']
@@ -66,7 +62,7 @@ app.use(csrf({
 
 // Request ID and logging
 app.use('*', requestId());
-app.use('*', logger());
+app.use('*', requestLogger);
 
 
 
@@ -136,6 +132,12 @@ app.get('/health', (c) => {
 
 app.route('/api/auth', authRoutes);
 app.route('/api/users', userRoutes);
+
+// Better-Auth handler for built-in endpoints (OAuth, etc.)
+// Mounted after custom routes - use catch-all for anything not matched above
+app.all("/api/auth/*", (c) => {
+	return auth.handler(c.req.raw);
+});
 
 
 // 404 handler

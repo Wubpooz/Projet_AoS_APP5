@@ -20,14 +20,14 @@ const authStatusQuerySchema = z.object({
 });
 
 const registerBodySchema = z.object({
-  email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: 'Invalid email' }),
-  password: z.string().min(8),
-  name: z.string().min(1).max(200).optional(),
+  email: z.email().describe('User email address'),
+  password: z.string().min(8).describe('User password (minimum 8 characters)'),
+  name: z.string().min(1).max(200).optional().describe('User display name'),
 });
 
 const loginBodySchema = z.object({
-  email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: 'Invalid email' }),
-  password: z.string().min(8),
+  email: z.email().describe('User email address'),
+  password: z.string().min(8).describe('User password'),
 });
 
 const messageResponseSchema = z.object({
@@ -90,13 +90,14 @@ authRoutes.post(
       required: true,
       content: {
         'application/json': {
+          
           example: {
             email: 'user@example.com',
-            name: 'User Example',
+            password: '********',
+            name: 'John Doe',
           },
         },
       },
-      description: 'Credentials are required in the request body but omitted from examples.',
     },
     responses: {
       200: {
@@ -118,7 +119,7 @@ authRoutes.post(
   }
   const user = c.get('user');
   if (user) {
-    return c.json({ message: 'Already logged in', user });
+    return c.json({ message: 'Already logged in', user, session: c.get('session') });
   }
 
   const body = c.req.valid('json');
@@ -137,6 +138,7 @@ authRoutes.post(
       user: result.user,
     });
   } catch (error) {
+    console.log('Registration error:', error);
     if (error instanceof APIError) {
       return c.json({ error: error.message }, error.status as ErrorStatusCode);
     }
@@ -164,10 +166,13 @@ authRoutes.post(
       required: true,
       content: {
         'application/json': {
-          example: { email: 'user@example.com' },
+          
+          example: {
+            email: 'user@example.com',
+            password: '********',
+          },
         },
       },
-      description: 'Credentials are required in the request body but omitted from examples.',
     },
     responses: {
       200: {
