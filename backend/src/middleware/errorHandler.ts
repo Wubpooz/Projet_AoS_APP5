@@ -13,14 +13,31 @@ export const errorHandler: ErrorHandler = (err, c) => {
     ? 'Internal Server Error'
     : (err.message || 'Internal Server Error');
 
+  const stack = err.stack || '';
+  const origin = stack
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.startsWith('at ') && !line.includes('node:internal') && !line.includes('node_modules'));
+
+  const cause = (err as { cause?: unknown }).cause;
+  const causeInfo = cause instanceof Error
+    ? { name: cause.name, message: cause.message, stack: cause.stack }
+    : cause;
+
   // Log error
   console.error('Error occurred', {
     statusCode,
     message,
-    stack: err.stack,
+    name: err.name,
+    requestId: c.get('requestId'),
+    origin,
+    stack,
+    cause: causeInfo,
     path: c.req.path,
     method: c.req.method,
   });
+
+  console.debug(err);
 
   // Send error response
   return c.json({
