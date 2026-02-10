@@ -10,6 +10,17 @@ type ErrorStatusCode = 400 | 401 | 500;
 
 export const authRoutes = new Hono<{ Variables: AuthType }>();
 
+const createAuthError = (fallbackMessage: string, error: unknown) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  let message = fallbackMessage;
+
+  if (!isProduction && error instanceof Error && error.message) {
+    message = error.message;
+  }
+
+  return new AppError(message, 500, error);
+};
+
 const authStatusResponseSchema = z.object({
   authenticated: z.boolean(),
   user: z.unknown().nullable(),
@@ -142,7 +153,7 @@ authRoutes.post(
     if (error instanceof APIError) {
       throw new AppError(error.message, error.status as ErrorStatusCode);
     }
-    throw new AppError('Registration failed', 500);
+    throw createAuthError('Registration failed', error);
   }
   }
 );
@@ -228,7 +239,7 @@ authRoutes.post(
     if (error instanceof APIError) {
       throw new AppError(error.message, error.status as ErrorStatusCode);
     }
-    throw new AppError('Login failed', 500);
+    throw createAuthError('Login failed', error);
   }
   }
 );
@@ -276,7 +287,7 @@ authRoutes.post(
     if (error instanceof APIError) {
       throw new AppError(error.message, error.status as ErrorStatusCode);
     }
-    throw new AppError('Logout failed', 500);
+    throw createAuthError('Logout failed', error);
   }
   }
 );

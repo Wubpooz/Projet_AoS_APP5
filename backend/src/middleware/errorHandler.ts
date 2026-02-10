@@ -6,7 +6,7 @@ export interface APIError extends Error {
   isOperational?: boolean;
 }
 
-export const errorHandler: ErrorHandler = (err, c) => {
+export const errorHandler: ErrorHandler = async (err, c) => {
   const statusCode = (err as APIError).statusCode || (err as { status?: number }).status || 500;
   const isOperational = (err as APIError).isOperational === true;
   const message = statusCode >= 500 && !isOperational
@@ -24,6 +24,21 @@ export const errorHandler: ErrorHandler = (err, c) => {
     ? { name: cause.name, message: cause.message, stack: cause.stack }
     : cause;
 
+  // Extract request body safely
+  let requestBody: unknown;
+  try {
+    const contentType = c.req.header('content-type');
+    if (contentType?.includes('application/json')) {
+      requestBody = await c.req.json().catch(() => undefined);
+    }
+  } catch {
+    requestBody = undefined;
+  }
+
+  // Extract user info from context
+  const user = c.get('user');
+  const userInfo = user ? { id: user.id, email: user.email } : undefined;
+
   // Log error
   console.error(err);
   console.error('Error context', {
@@ -35,6 +50,8 @@ export const errorHandler: ErrorHandler = (err, c) => {
     cause: causeInfo,
     path: c.req.path,
     method: c.req.method,
+    requestBody,
+    user: userInfo,
   });
 
   // Send error response
@@ -48,11 +65,14 @@ export const errorHandler: ErrorHandler = (err, c) => {
 export class AppError extends Error implements APIError {
   statusCode: ContentfulStatusCode;
   isOperational: boolean;
+  override cause?: unknown;
 
-  constructor(message: string, statusCode: ContentfulStatusCode = 500) {
+  constructor(message: string, statusCode: ContentfulStatusCode = 500, cause?: unknown) {
     super(message);
+    this.name = 'AppError';
     this.statusCode = statusCode;
     this.isOperational = true;
+    this.cause = cause;
 
     Error.captureStackTrace(this, this.constructor);
   }
