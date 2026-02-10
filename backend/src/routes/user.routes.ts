@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { describeRoute, resolver, validator } from 'hono-openapi';
 import type { AuthType } from '@/middleware/auth';
 import { userService } from '@/services/user.service';
+import { AppError } from '@/middleware/errorHandler';
 
 export const userRoutes = new Hono<{ Variables: AuthType }>();
 
@@ -73,7 +74,9 @@ userRoutes.get(
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  const user = await userService.getById(sessionUser.id);
+  const user = await userService.getById(sessionUser.id).catch(() => {
+    throw new AppError('Failed to fetch user profile', 500);
+  });
   if (!user) {
     return c.json({ error: 'User not found' }, 404);
   }
@@ -118,7 +121,9 @@ userRoutes.get(
   validator('param', userIdParamSchema),
   async (c) => {
   const id = c.req.param('id');
-  const user = await userService.getById(id);
+  const user = await userService.getById(id).catch(() => {
+    throw new AppError('Failed to fetch user', 500);
+  });
 
   if (!user) {
     return c.json({ error: 'User not found' }, 404);
@@ -199,7 +204,9 @@ userRoutes.patch(
     return c.json({ error: 'No fields to update' }, 400);
   }
 
-  const user = await userService.updateById(sessionUser.id, data);
+  const user = await userService.updateById(sessionUser.id, data).catch(() => {
+    throw new AppError('Failed to update user', 500);
+  });
   return c.json({ user });
   }
 );

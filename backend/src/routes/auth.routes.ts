@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { describeRoute, resolver, validator } from 'hono-openapi';
 import { APIError } from 'better-auth/api';
+import { AppError } from '@/middleware/errorHandler';
 import { auth } from '@/middleware/auth';
 import type { AuthType } from '@/middleware/auth';
 
@@ -138,11 +139,10 @@ authRoutes.post(
       user: result.user,
     });
   } catch (error) {
-    console.log('Registration error:', error);
     if (error instanceof APIError) {
-      return c.json({ error: error.message }, error.status as ErrorStatusCode);
+      throw new AppError(error.message, error.status as ErrorStatusCode);
     }
-    return c.json({ error: 'An unexpected error occurred' }, 500);
+    throw new AppError('Registration failed', 500);
   }
   }
 );
@@ -226,9 +226,9 @@ authRoutes.post(
     });
   } catch (error) {
     if (error instanceof APIError) {
-      return c.json({ error: error.message }, error.status as ErrorStatusCode);
+      throw new AppError(error.message, error.status as ErrorStatusCode);
     }
-    return c.json({ error: 'An unexpected error occurred' }, 500);
+    throw new AppError('Login failed', 500);
   }
   }
 );
@@ -274,9 +274,9 @@ authRoutes.post(
     return c.json({ message: 'Logout successful' });
   } catch (error) {
     if (error instanceof APIError) {
-      return c.json({ error: error.message }, error.status as ErrorStatusCode);
+      throw new AppError(error.message, error.status as ErrorStatusCode);
     }
-    return c.json({ error: 'An unexpected error occurred' }, 500);
+    throw new AppError('Logout failed', 500);
   }
   }
 );

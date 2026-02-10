@@ -7,8 +7,11 @@ export interface APIError extends Error {
 }
 
 export const errorHandler: ErrorHandler = (err, c) => {
-  const statusCode = (err as APIError).statusCode || 500;
-  const message = err.message || 'Internal Server Error';
+  const statusCode = (err as APIError).statusCode || (err as { status?: number }).status || 500;
+  const isOperational = (err as APIError).isOperational === true;
+  const message = statusCode >= 500 && !isOperational
+    ? 'Internal Server Error'
+    : (err.message || 'Internal Server Error');
 
   // Log error
   console.error('Error occurred', {
@@ -23,9 +26,8 @@ export const errorHandler: ErrorHandler = (err, c) => {
   return c.json({
     error: {
       message,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     },
-  }, statusCode);
+  }, statusCode as ContentfulStatusCode);
 };
 
 export class AppError extends Error implements APIError {
