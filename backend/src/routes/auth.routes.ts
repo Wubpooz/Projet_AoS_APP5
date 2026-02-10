@@ -21,13 +21,13 @@ const authStatusQuerySchema = z.object({
 });
 
 const registerBodySchema = z.object({
-  email: z.email().describe('User email address'),
+  email: z.email().describe('User email address').meta({ example: 'user@example.com' }), // without meta, generates random string (zod-to-openapi does not generate examples for z.string().email() (v3 or v4). It only maps the format.)
   password: z.string().min(8).describe('User password (minimum 8 characters)'),
   name: z.string().min(1).max(200).optional().describe('User display name'),
 });
 
 const loginBodySchema = z.object({
-  email: z.email().describe('User email address'),
+  email: z.email().describe('User email address').meta({ example: 'user@example.com' }),
   password: z.string().min(8).describe('User password'),
 });
 
