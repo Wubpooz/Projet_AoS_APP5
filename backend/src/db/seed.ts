@@ -1,8 +1,4 @@
-// import { PrismaClient } from "@prisma/client";
-const { PrismaClient } = require( '@prisma/client');
-const {config} = require( '../../config');
-
-const prisma = new PrismaClient();
+import prisma from './index';
 
 async function main() {
   // Clear existing data
@@ -15,6 +11,8 @@ async function main() {
   // Create users
   const user1 = await prisma.user.create({
     data: {
+      id: "user1",
+      name: "John Doe",
       username: "john_doe",
       email: "john@example.com",
     },
@@ -22,6 +20,8 @@ async function main() {
 
   const user2 = await prisma.user.create({
     data: {
+      id: "user2",
+      name: "Jane Smith",
       username: "jane_smith",
       email: "jane@example.com",
     },
