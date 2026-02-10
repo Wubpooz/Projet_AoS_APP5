@@ -1,13 +1,13 @@
 # API Endpoints Proposal
 
+**Access control: owner, collaborator, reader roles on collections.**
 
-- GET /users/:userId/collections : Features: list public collections by user
+**Users**
+- `GET /users/:userId/collections` : list public collections by user
 
-## Media
-- POST /media
-  - Features: create media entry
-- GET /media
-  - Features: list media with pagination, filtering, sorting, and navigation
+**Media**
+- `POST /media` : create media entry
+- `GET /media` : list media with pagination, filtering, sorting, and navigation
   - Query parameters:
     - page (default 1), pageSize (default 20)
     - type (FILM|SERIES|BOOK|ARTICLE|OTHER)
@@ -18,7 +18,7 @@
     - order (asc|desc)
     - cursor (optional, for cursor navigation)
   - Example request:
-    - GET /media?page=1&pageSize=10&type=FILM&tag=sci-fi&platform=netflix&sort=releaseDate&order=desc
+    - `GET /media?page=1&pageSize=10&type=FILM&tag=sci-fi&platform=netflix&sort=releaseDate&order=desc`
   - Example response:
     - {
         "data": [ { "id": "...", "title": "...", "type": "FILM" } ],
@@ -32,60 +32,40 @@
           "prev": null
         }
       }
-- GET /media/:mediaId
-  - Features: get media details
-- PATCH /media/:mediaId
-  - Features: update media fields
-- DELETE /media/:mediaId
-  - Features: delete media (admin/owner)
+- `GET /media/:mediaId` : get media details
+- `PATCH /media/:mediaId` : update media fields
+- `DELETE /media/:mediaId` : delete media (admin/owner)
 
-## Collections
-- POST /collections
-  - Features: create collection, set visibility
-- GET /collections
-  - Features: list collections (public or owned), filter by tags, search
-- GET /collections/:collectionId
-  - Features: collection details and media count
-- PATCH /collections/:collectionId
-  - Features: update name, description, tags, visibility
-- DELETE /collections/:collectionId
-  - Features: delete collection (owner only)
 
-## Collection Media
-- POST /collections/:collectionId/media
-  - Features: add media to collection (position optional)
+
+**Collections**
+- `POST /collections` : create collection, set visibility
+- `GET /collections` : list collections (public or owned), filter by tags, search
+- `GET /collections/:collectionId` : collection details and media count
+- `PATCH /collections/:collectionId` : update name, description, tags, visibility
+- `DELETE /collections/:collectionId` : delete collection (owner only)
+
+**Collection > Media**
+- `POST /collections/:collectionId/media` : add media to collection (position optional)
   - Example body: { "mediaId": "...", "position": 3 }
-- GET /collections/:collectionId/media
-  - Features: list media in collection, optional pagination
-- PATCH /collections/:collectionId/media/:collectionMediaId
-  - Features: update position
-- DELETE /collections/:collectionId/media/:collectionMediaId
-  - Features: remove media from collection
+- `GET /collections/:collectionId/media` : list media in collection, optional pagination
+- `PATCH /collections/:collectionId/media/:collectionMediaId`
+- `DELETE /collections/:collectionId/media/:collectionMediaId`
 
-## Collection Members
-- POST /collections/:collectionId/members
-  - Features: invite collaborator/reader by userId or email
-  - Example body: { "userId": "...", "role": "COLLABORATOR" }
-- GET /collections/:collectionId/members
-  - Features: list members and roles
-- PATCH /collections/:collectionId/members/:memberId
-  - Features: change role, accept invite
-- DELETE /collections/:collectionId/members/:memberId
-  - Features: remove member
-
-## Scores and Notes (P2)
-- POST /media/:mediaId/scores
-  - Features: add score per source (IMDb, user)
-- GET /media/:mediaId/scores
-  - Features: list scores
-- PATCH /media/:mediaId/scores/:scoreId
-  - Features: update score
-- DELETE /media/:mediaId/scores/:scoreId
-  - Features: remove score
-
-## Tags (optional helper)
-- GET /tags
-  - Features: list most used tags across media/collections
+**Collection > Members**
+- `POST /collections/:collectionId/members`
+- `GET /collections/:collectionId/members`
+- `PATCH /collections/:collectionId/members/:memberId`
+- `DELETE /collections/:collectionId/members/:memberId`
 
 
-- Access control: owner, collaborator, reader roles on collections.
+
+
+**Scores and Notes (P2)**
+- `POST /media/:mediaId/scores`
+- `GET /media/:mediaId/scores`
+- `PATCH /media/:mediaId/scores/:scoreId`
+- `DELETE /media/:mediaId/scores/:scoreId`
+
+**Tags (optional helper)**
+- `GET /tags` : list most used tags across media/collections
