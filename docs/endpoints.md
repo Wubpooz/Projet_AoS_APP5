@@ -1,14 +1,7 @@
 # API Endpoints Proposal
 
-## Users
-- GET /users/me
-  - Features: profile details, counts, settings
-- PATCH /users/me
-  - Features: update profile (name, username, image)
-- GET /users/:userId
-  - Features: public profile
-- GET /users/:userId/collections
-  - Features: list public collections by user
+
+- GET /users/:userId/collections : Features: list public collections by user
 
 ## Media
 - POST /media

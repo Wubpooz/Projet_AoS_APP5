@@ -26,7 +26,7 @@ const updateUserSchema = z.object({
 });
 
 const userIdParamSchema = z.object({
-  id: z.string().min(1),
+  userId: z.string().min(1),
 });
 
 const userResponseSchema = z.object({
@@ -34,22 +34,14 @@ const userResponseSchema = z.object({
 });
 
 userRoutes.get(
-  '/profile',
+  '/me',
   describeRoute({
     tags: ['Users'],
-    description: 'Get the authenticated user profile',
-    parameters: [
-      {
-        name: 'better-auth.session',
-        in: 'cookie',
-        required: true,
-        schema: { type: 'string' },
-        description: 'Better-Auth session cookie',
-      },
-    ],
+    description: 'Get authenticated user profile with profile details, counts, and settings',
+    security: [{ bearerAuth: [] }],
     responses: {
       200: {
-        description: 'User profile',
+        description: 'User profile with details, counts, and settings',
         content: {
           'application/json': {
             schema: resolver(userResponseSchema),
@@ -59,6 +51,10 @@ userRoutes.get(
                 email: 'user@example.com',
                 name: 'User Example',
                 username: 'userexample',
+                displayUsername: 'User Example',
+                image: 'https://example.com/avatar.png',
+                emailVerified: true,
+                createdAt: '2026-01-01T00:00:00.000Z',
               },
             },
           },
@@ -85,68 +81,12 @@ userRoutes.get(
   }
 );
 
-userRoutes.get(
-  '/:id',
-  describeRoute({
-    tags: ['Users'],
-    description: 'Get a public user profile by id',
-    parameters: [
-      {
-        name: 'id',
-        in: 'path',
-        required: true,
-        schema: { type: 'string' },
-        example: 'user_123',
-      },
-    ],
-    responses: {
-      200: {
-        description: 'User profile',
-        content: {
-          'application/json': {
-            schema: resolver(userResponseSchema),
-            example: {
-              user: {
-                id: 'user_123',
-                email: 'user@example.com',
-                name: 'User Example',
-              },
-            },
-          },
-        },
-      },
-      404: { description: 'User not found' },
-    },
-  }),
-  validator('param', userIdParamSchema),
-  async (c) => {
-  const id = c.req.param('id');
-  const user = await userService.getById(id).catch(() => {
-    throw new AppError('Failed to fetch user', 500);
-  });
-
-  if (!user) {
-    return c.json({ error: 'User not found' }, 404);
-  }
-
-  return c.json({ user });
-  }
-);
-
 userRoutes.patch(
-  '/profile',
+  '/me',
   describeRoute({
     tags: ['Users'],
-    description: 'Update authenticated user profile',
-    parameters: [
-      {
-        name: 'better-auth.session',
-        in: 'cookie',
-        required: true,
-        schema: { type: 'string' },
-        description: 'Better-Auth session cookie',
-      },
-    ],
+    description: 'Update authenticated user profile (name, username, image)',
+    security: [{ bearerAuth: [] }],
     requestBody: {
       required: true,
       content: {
@@ -173,12 +113,13 @@ userRoutes.patch(
                 name: 'Updated Name',
                 username: 'newusername',
                 displayUsername: 'New Username',
+                image: 'https://example.com/avatar.png',
               },
             },
           },
         },
       },
-      400: { description: 'Invalid payload' },
+      400: { description: 'Invalid payload or no fields to update' },
       401: { description: 'Unauthorized' },
     },
   }),
@@ -207,6 +148,57 @@ userRoutes.patch(
   const user = await userService.updateById(sessionUser.id, data).catch(() => {
     throw new AppError('Failed to update user', 500);
   });
+  return c.json({ user });
+  }
+);
+
+
+userRoutes.get(
+  '/:userId',
+  describeRoute({
+    tags: ['Users'],
+    description: 'Get a public user profile by user ID',
+    parameters: [
+      {
+        name: 'userId',
+        in: 'path',
+        required: true,
+        schema: { type: 'string' },
+        example: 'user_123',
+      },
+    ],
+    responses: {
+      200: {
+        description: 'Public user profile',
+        content: {
+          'application/json': {
+            schema: resolver(userResponseSchema),
+            example: {
+              user: {
+                id: 'user_123',
+                email: 'user@example.com',
+                name: 'User Example',
+                username: 'userexample',
+                displayUsername: 'User Example',
+              },
+            },
+          },
+        },
+      },
+      404: { description: 'User not found' },
+    },
+  }),
+  validator('param', userIdParamSchema),
+  async (c) => {
+  const userId = c.req.param('userId');
+  const user = await userService.getById(userId).catch(() => {
+    throw new AppError('Failed to fetch user', 500);
+  });
+
+  if (!user) {
+    return c.json({ error: 'User not found' }, 404);
+  }
+
   return c.json({ user });
   }
 );
