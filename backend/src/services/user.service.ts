@@ -15,6 +15,7 @@ export const userService = {
     return user ? toPublicUser(user) : null;
   },
 
+  //TODO shouldn't edit anything related to auth (email, password, username etc) since better-auth manages that
   async updateById(
     id: string,
     data: DbUserUpdateInput

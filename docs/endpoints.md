@@ -94,21 +94,5 @@
 - GET /tags
   - Features: list most used tags across media/collections
 
-## Admin / Health
-- GET /health
-  - Features: status, db connectivity
-- GET /metrics
-  - Features: basic metrics (optional)
 
-## Errors (common)
-- 400: validation error
-- 401: unauthorized
-- 403: forbidden
-- 404: not found
-- 409: conflict
-- 500: internal error
-
-## Notes
-- Use Zod for request body and query validation.
 - Access control: owner, collaborator, reader roles on collections.
-- Rate limiting on auth and public list endpoints.
