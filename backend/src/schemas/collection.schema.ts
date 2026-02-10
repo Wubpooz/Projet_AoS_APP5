@@ -5,7 +5,7 @@ import { type Prisma, type Collection, type CollectionMedia, type CollectionUser
 export const createCollectionSchema = z.object({
   name: z.string().min(1).max(200).meta({ example: 'My Favorites' }),
   description: z.string().max(1000).optional().meta({ example: 'A collection of my favorite movies' }),
-  tags: z.array(z.string().min(0).max(50)).optional().meta({ example: ['favorites', 'movies'] }),
+  tags: z.array(z.string().max(50)).optional().meta({ example: ['favorites', 'movies'] }),
   visibility: z.nativeEnum(Visibility).optional().default(Visibility.PRIVATE).meta({ example: Visibility.PUBLIC }),
 }) satisfies z.Schema<Prisma.CollectionCreateInput>;
 
@@ -26,7 +26,7 @@ export const collectionResponseSchema = z.object({
 export const updateCollectionSchema = z.object({
   name: z.string().min(1).max(200).optional().meta({ example: 'My Favorites' }),
   description: z.string().max(1000).optional().meta({ example: 'Updated description' }),
-  tags: z.array(z.string().min(0).max(50)).optional().meta({ example: ['favorites', 'movies'] }),
+  tags: z.array(z.string().max(50)).optional().meta({ example: ['favorites', 'movies'] }),
   visibility: z.nativeEnum(Visibility).optional().meta({ example: Visibility.PUBLIC }),
 }) satisfies z.Schema<Prisma.CollectionUpdateInput>;
 
