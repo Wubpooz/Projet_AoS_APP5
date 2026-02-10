@@ -1,54 +1,13 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { describeRoute, resolver, validator } from 'hono-openapi';
 import type { AuthType } from '@/middleware/auth';
 import { userService } from '@/services/user.service';
 import { AppError } from '@/middleware/errorHandler';
+import { collectionsResponseSchema, updateUserSchema, userIdParamSchema, userResponseSchema,  } from '@/schemas/user.schema';
 
 export const userRoutes = new Hono<{ Variables: AuthType }>();
 
-const updateUserSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  image: z
-    .string()
-    .min(1)
-    .refine((value) => {
-      try {
-        new URL(value);
-        return true;
-      } catch {
-        return false;
-      }
-    }, { message: 'Invalid URL' })
-    .optional(),
-  username: z.string().min(2).max(40).optional(),
-  displayUsername: z.string().min(2).max(60).optional(),
-});
-
-const userIdParamSchema = z.object({
-  userId: z.string().min(1),
-});
-
-const userResponseSchema = z.object({
-  user: z.unknown(),
-});
-
-const collectionsResponseSchema = z.object({
-  collections: z.array(z.unknown()),
-});
-const collectionsResponseExample = {
-  collections: [
-    {
-      id: 'col_123',
-      name: 'My Collection',
-      description: 'A collection of my favorite media',
-      tags: ['tag1', 'tag2'],
-      isPublic: true,
-      createdAt: '2026-01-01T00:00:00.000Z',
-    },
-  ],
-};
-
+// GET /me - Get authenticated user profile with profile details, counts, and settings
 userRoutes.get(
   '/me',
   describeRoute({
@@ -61,18 +20,6 @@ userRoutes.get(
         content: {
           'application/json': {
             schema: resolver(userResponseSchema),
-            example: {
-              user: {
-                id: 'user_123',
-                email: 'user@example.com',
-                name: 'User Example',
-                username: 'userexample',
-                displayUsername: 'User Example',
-                image: 'https://example.com/avatar.png',
-                emailVerified: true,
-                createdAt: '2026-01-01T00:00:00.000Z',
-              },
-            },
           },
         },
       },
@@ -97,6 +44,8 @@ userRoutes.get(
   }
 );
 
+
+// PATCH /me - Update authenticated user profile (name, username, image)
 userRoutes.patch(
   '/me',
   describeRoute({
@@ -106,14 +55,7 @@ userRoutes.patch(
     requestBody: {
       required: true,
       content: {
-        'application/json': {
-          example: {
-            name: 'Updated Name',
-            image: 'https://example.com/avatar.png',
-            username: 'newusername',
-            displayUsername: 'New Username',
-          },
-        },
+        'application/json': { },
       },
     },
     responses: {
@@ -122,16 +64,6 @@ userRoutes.patch(
         content: {
           'application/json': {
             schema: resolver(userResponseSchema),
-            example: {
-              user: {
-                id: 'user_123',
-                email: 'user@example.com',
-                name: 'Updated Name',
-                username: 'newusername',
-                displayUsername: 'New Username',
-                image: 'https://example.com/avatar.png',
-              },
-            },
           },
         },
       },
@@ -169,6 +101,7 @@ userRoutes.patch(
 );
 
 
+// GET /:userId - Get a public user profile by user ID
 userRoutes.get(
   '/:userId',
   describeRoute({
@@ -189,15 +122,6 @@ userRoutes.get(
         content: {
           'application/json': {
             schema: resolver(userResponseSchema),
-            example: {
-              user: {
-                id: 'user_123',
-                email: 'user@example.com',
-                name: 'User Example',
-                username: 'userexample',
-                displayUsername: 'User Example',
-              },
-            },
           },
         },
       },
@@ -220,6 +144,7 @@ userRoutes.get(
 );
 
 
+// GET /:userId/collections - List public collections by user
 userRoutes.get(
   '/:userId/collections',
   describeRoute({
@@ -240,7 +165,6 @@ userRoutes.get(
         content: {
           'application/json': {
             schema: resolver(collectionsResponseSchema),
-            example: collectionsResponseExample,
           },
         },
       },

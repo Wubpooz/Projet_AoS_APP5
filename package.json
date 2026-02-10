@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "bun --hot run backend/src/index.ts",
-    "build": "tsc",
+    "build": "bun run build:tsc",
+    "build:tsc": "tsc --project backend/tsconfig.json",
     "start": "bun run build/index.js",
     "prisma:generate": "cd backend && bunx --bun prisma generate",
     "prisma:migrate": "cd backend && bunx --bun prisma migrate dev",

@@ -1,83 +1,14 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { describeRoute, resolver, validator } from 'hono-openapi';
 import { APIError } from 'better-auth/api';
-import { AppError } from '@/middleware/errorHandler';
 import { auth } from '@/middleware/auth';
 import type { AuthType } from '@/middleware/auth';
-import { type ContentfulStatusCode } from 'hono/utils/http-status';
-
-type ErrorStatusCode = ContentfulStatusCode;
+import { registerBodySchema, loginBodySchema, messageResponseSchema, forgotPasswordBodySchema, resetPasswordBodySchema } from '@/schemas/auth.schema';
+import { createAuthError, resolveApiErrorStatus, AppError } from '@/middleware/errorHandler';
 
 export const authRoutes = new Hono<{ Variables: AuthType }>();
 
-const createAuthError = (fallbackMessage: string, error: unknown) => {
-  const isProduction = process.env.NODE_ENV === 'production';
-  let message = fallbackMessage;
-
-  if (!isProduction && error instanceof Error && error.message) {
-    message = error.message;
-  }
-
-  return new AppError(message, 500, error);
-};
-
-const resolveApiErrorStatus = (error: APIError): ErrorStatusCode => {
-  const rawStatus = (error as { statusCode?: number | string; status?: number | string }).statusCode
-    ?? (error as { status?: number | string }).status;
-
-  if (typeof rawStatus === 'number') {
-    return rawStatus as ErrorStatusCode;
-  }
-
-  if (typeof rawStatus === 'string') {
-    const statusMap: Record<string, ErrorStatusCode> = {
-      BAD_REQUEST: 400,
-      UNAUTHORIZED: 401,
-      FORBIDDEN: 403,
-      NOT_FOUND: 404,
-      CONFLICT: 409,
-      UNPROCESSABLE_ENTITY: 422,
-      TOO_MANY_REQUESTS: 429,
-      INTERNAL_SERVER_ERROR: 500,
-    };
-
-    return statusMap[rawStatus] ?? 500;
-  }
-
-  return 500;
-};
-
-const registerBodySchema = z.object({
-  email: z.email().describe('User email address').meta({ example: 'user@example.com' }), // without meta, generates random string (zod-to-openapi does not generate examples for z.string().email() (v3 or v4). It only maps the format.)
-  password: z.string().min(8).describe('User password (minimum 8 characters)').meta({ example: 'pozajaopjioeahifohaieofae' }),
-  name: z.string().min(1).max(200).optional().describe('User display name').meta({ example: 'John Doe' }),
-});
-
-const loginBodySchema = z.object({
-  email: z.email().describe('User email address').meta({ example: 'user@example.com' }),
-  password: z.string().min(8).describe('User password').meta({ example: 'pozajaopjioeahifohaieofae'}),
-});
-
-const messageResponseSchema = z.object({
-  message: z.string(),
-  user: z.unknown().optional(),
-  session: z.unknown().optional(),
-  sessionToken: z.string().optional(),
-});
-
-const forgotPasswordBodySchema = z.object({
-  email: z.email().describe('User email address').meta({ example: 'user@example.com' }),
-});
-
-const resetPasswordBodySchema = z.object({
-  token: z.string().min(1).describe('Password reset token'),
-  newPassword: z.string().min(8).describe('New password (minimum 8 characters)').meta({ example: 'newpassword123' }),
-});
-
-
-
-
+// POST /register - Register a new user account
 authRoutes.post(
   '/register',
   describeRoute({
@@ -87,7 +18,6 @@ authRoutes.post(
       required: true,
       content: {
         'application/json': {
-          
           example: {
             email: 'user@example.com',
             password: '********',
@@ -145,6 +75,8 @@ authRoutes.post(
   }
 );
 
+
+// POST /login - Log in with credentials and receive session token
 authRoutes.post(
   '/login',
   describeRoute({
@@ -154,7 +86,6 @@ authRoutes.post(
       required: true,
       content: {
         'application/json': {
-          
           example: {
             email: 'user@example.com',
             password: '********',
@@ -242,6 +173,8 @@ authRoutes.post(
   }
 );
 
+
+// POST /logout - Log out and revoke the current session
 authRoutes.post(
   '/logout',
   describeRoute({
@@ -283,6 +216,7 @@ authRoutes.post(
 );
 
 
+// POST /forgot-password - Initiate password reset process by sending a reset email
 authRoutes.post(
   '/forgot-password',
   describeRoute({
@@ -337,6 +271,7 @@ authRoutes.post(
 );
 
 
+// POST /reset-password - Complete password reset process by providing new password and reset token
 authRoutes.post(
   '/reset-password',
   describeRoute({
@@ -392,8 +327,7 @@ authRoutes.post(
 );
 
 
-
-
+// GET /me - Get the authenticated user profile and session info
 authRoutes.get(
   '/me',
   describeRoute({

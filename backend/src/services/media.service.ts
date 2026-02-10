@@ -3,6 +3,9 @@ import { AppError } from "@/middleware/errorHandler";
 
 
 export const mediaService = {
+  /**
+   * 
+   */
   async createMedia(data: any) {
     try {
       const newMedia = await prisma.media.create({ data });

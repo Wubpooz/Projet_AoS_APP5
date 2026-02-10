@@ -1,9 +1,25 @@
 import { type ErrorHandler } from 'hono';
-import { type ContentfulStatusCode } from 'hono/utils/http-status';
+import { type ContentfulStatusCode as ErrorStatusCode } from 'hono/utils/http-status';
 
 export interface APIError extends Error {
-  statusCode?: ContentfulStatusCode;
+  statusCode?: ErrorStatusCode;
   isOperational?: boolean;
+}
+
+export class AppError extends Error implements APIError {
+  statusCode: ErrorStatusCode;
+  isOperational: boolean;
+  override cause?: unknown;
+
+  constructor(message: string, statusCode: ErrorStatusCode = 500, cause?: unknown) {
+    super(message);
+    this.name = 'AppError';
+    this.statusCode = statusCode;
+    this.isOperational = true;
+    this.cause = cause;
+
+    Error.captureStackTrace(this, this.constructor);
+  }
 }
 
 export const errorHandler: ErrorHandler = async (err, c) => {
@@ -59,21 +75,42 @@ export const errorHandler: ErrorHandler = async (err, c) => {
     error: {
       message,
     },
-  }, statusCode as ContentfulStatusCode);
+  }, statusCode as ErrorStatusCode);
 };
 
-export class AppError extends Error implements APIError {
-  statusCode: ContentfulStatusCode;
-  isOperational: boolean;
-  override cause?: unknown;
+export const createAuthError = (fallbackMessage: string, error: unknown) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  let message = fallbackMessage;
 
-  constructor(message: string, statusCode: ContentfulStatusCode = 500, cause?: unknown) {
-    super(message);
-    this.name = 'AppError';
-    this.statusCode = statusCode;
-    this.isOperational = true;
-    this.cause = cause;
-
-    Error.captureStackTrace(this, this.constructor);
+  if (!isProduction && error instanceof Error && error.message) {
+    message = error.message;
   }
-}
+
+  return new AppError(message, 500, error);
+};
+
+export const resolveApiErrorStatus = (error: unknown): ErrorStatusCode => {
+  const err = error as any;
+  const rawStatus = err?.statusCode ?? err?.status;
+
+  if (typeof rawStatus === 'number') {
+    return rawStatus as ErrorStatusCode;
+  }
+
+  if (typeof rawStatus === 'string') {
+    const statusMap: Record<string, ErrorStatusCode> = {
+      BAD_REQUEST: 400,
+      UNAUTHORIZED: 401,
+      FORBIDDEN: 403,
+      NOT_FOUND: 404,
+      CONFLICT: 409,
+      UNPROCESSABLE_ENTITY: 422,
+      TOO_MANY_REQUESTS: 429,
+      INTERNAL_SERVER_ERROR: 500,
+    };
+
+    return statusMap[rawStatus] ?? 500;
+  }
+
+  return 500;
+};
