@@ -455,27 +455,21 @@
         }
       }
     },
-    "/api/users/profile": {
+    "/api/users/me": {
       "get": {
-        "operationId": "getApiUsersProfile",
+        "operationId": "getApiUsersMe",
         "tags": [
           "Users"
         ],
-        "description": "Get the authenticated user profile",
-        "parameters": [
+        "description": "Get authenticated user profile with profile details, counts, and settings",
+        "security": [
           {
-            "name": "better-auth.session",
-            "in": "cookie",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Better-Auth session cookie"
+            "bearerAuth": []
           }
         ],
         "responses": {
           "200": {
-            "description": "User profile",
+            "description": "User profile with details, counts, and settings",
             "content": {
               "application/json": {
                 "schema": {
@@ -492,7 +486,11 @@
                     "id": "user_123",
                     "email": "user@example.com",
                     "name": "User Example",
-                    "username": "userexample"
+                    "username": "userexample",
+                    "displayUsername": "User Example",
+                    "image": "https://example.com/avatar.png",
+                    "emailVerified": true,
+                    "createdAt": "2026-01-01T00:00:00.000Z"
                   }
                 }
               }
@@ -507,20 +505,14 @@
         }
       },
       "patch": {
-        "operationId": "patchApiUsersProfile",
+        "operationId": "patchApiUsersMe",
         "tags": [
           "Users"
         ],
-        "description": "Update authenticated user profile",
-        "parameters": [
+        "description": "Update authenticated user profile (name, username, image)",
+        "security": [
           {
-            "name": "better-auth.session",
-            "in": "cookie",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Better-Auth session cookie"
+            "bearerAuth": []
           }
         ],
         "requestBody": {
@@ -574,14 +566,15 @@
                     "email": "user@example.com",
                     "name": "Updated Name",
                     "username": "newusername",
-                    "displayUsername": "New Username"
+                    "displayUsername": "New Username",
+                    "image": "https://example.com/avatar.png"
                   }
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid payload"
+            "description": "Invalid payload or no fields to update"
           },
           "401": {
             "description": "Unauthorized"
@@ -589,17 +582,17 @@
         }
       }
     },
-    "/api/users/{id}": {
+    "/api/users/{userId}": {
       "get": {
-        "operationId": "getApiUsersById",
+        "operationId": "getApiUsersByUserId",
         "tags": [
           "Users"
         ],
-        "description": "Get a public user profile by id",
+        "description": "Get a public user profile by user ID",
         "parameters": [
           {
             "in": "path",
-            "name": "id",
+            "name": "userId",
             "schema": {
               "type": "string",
               "minLength": 1
@@ -609,7 +602,7 @@
         ],
         "responses": {
           "200": {
-            "description": "User profile",
+            "description": "Public user profile",
             "content": {
               "application/json": {
                 "schema": {
@@ -625,8 +618,69 @@
                   "user": {
                     "id": "user_123",
                     "email": "user@example.com",
-                    "name": "User Example"
+                    "name": "User Example",
+                    "username": "userexample",
+                    "displayUsername": "User Example"
                   }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/api/users/{userId}/collections": {
+      "get": {
+        "operationId": "getApiUsersByUserIdCollections",
+        "tags": [
+          "Users"
+        ],
+        "description": "List public collections by user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of public collections by user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "collections": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  },
+                  "required": [
+                    "collections"
+                  ]
+                },
+                "example": {
+                  "collections": [
+                    {
+                      "id": "col_123",
+                      "name": "My Collection",
+                      "description": "A collection of my favorite media",
+                      "tags": [
+                        "tag1",
+                        "tag2"
+                      ],
+                      "isPublic": true,
+                      "createdAt": "2026-01-01T00:00:00.000Z"
+                    }
+                  ]
                 }
               }
             }
