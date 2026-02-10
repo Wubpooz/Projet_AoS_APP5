@@ -23,4 +23,21 @@ export const userService = {
     const user = await prisma.user.update({ where: { id }, data });
     return toPublicUser(user);
   },
+
+  async getPublicCollections(userId: string) {
+    const collections = await prisma.collection.findMany({
+      where: {
+        ownerId: userId,
+        visibility: "PUBLIC",
+      },
+      include: {
+        _count: {
+          select: {
+            media: true,
+          },
+        },
+      },
+    });
+    return collections;
+  },
 };

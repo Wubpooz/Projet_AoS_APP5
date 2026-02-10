@@ -2,9 +2,6 @@
 
 **Access control: owner, collaborator, reader roles on collections.**
 
-**Users**
-- `GET /users/:userId/collections` : list public collections by user
-
 **Media**
 - `POST /media` : create media entry
 - `GET /media` : list media with pagination, filtering, sorting, and navigation

@@ -33,6 +33,22 @@ const userResponseSchema = z.object({
   user: z.unknown(),
 });
 
+const collectionsResponseSchema = z.object({
+  collections: z.array(z.unknown()),
+});
+const collectionsResponseExample = {
+  collections: [
+    {
+      id: 'col_123',
+      name: 'My Collection',
+      description: 'A collection of my favorite media',
+      tags: ['tag1', 'tag2'],
+      isPublic: true,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    },
+  ],
+};
+
 userRoutes.get(
   '/me',
   describeRoute({
@@ -202,3 +218,44 @@ userRoutes.get(
   return c.json({ user });
   }
 );
+
+
+userRoutes.get(
+  '/:userId/collections',
+  describeRoute({
+    tags: ['Users'],
+    description: 'List public collections by user',
+    parameters: [
+      {
+        name: 'userId',
+        in: 'path',
+        required: true,
+        schema: { type: 'string' },
+        example: 'user_123',
+      },
+    ],
+    responses: {
+      200: {
+        description: 'List of public collections by user',
+        content: {
+          'application/json': {
+            schema: resolver(collectionsResponseSchema),
+            example: collectionsResponseExample,
+          },
+        },
+      },
+      404: { description: 'User not found' },
+    },
+  }),
+  validator('param', userIdParamSchema),
+  async (c) => {
+    const userId = c.req.param('userId');
+    const collections = await userService.getPublicCollections(userId).catch(() => {
+      throw new AppError('Failed to fetch collections', 500);
+    });
+    if (!collections) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    return c.json({ collections }, 200);
+  }
+)
