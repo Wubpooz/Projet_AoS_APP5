@@ -19,6 +19,7 @@ import {
   updateCollectionMemberSchema,
 } from '@/schemas/collection.schema';
 import { AppError } from '@/middleware/errorHandler';
+import { CollectionRole } from '@/generated/prisma/client';
 
 export const collectionRoutes = new Hono<{ Variables: AuthType }>();
 
@@ -483,7 +484,7 @@ collectionRoutes.post(
     const collectionMember = await collectionService.addMemberToCollection(
       collectionId,
       userId,
-      role || 'READER',
+      role || CollectionRole.READER,
       sessionUser.id
     );
 
