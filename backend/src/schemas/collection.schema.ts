@@ -21,6 +21,10 @@ export const collectionResponseSchema = z.object({
   media: z.array(z.any()).optional(),
   members: z.array(z.any()).optional(),
   owner: z.any().optional(),
+  _count: z.object({
+    media: z.number().optional(),
+    members: z.number().optional(),
+  }).optional(),
 }) satisfies z.Schema<Collection>;
 
 export const updateCollectionSchema = z.object({

@@ -48,7 +48,7 @@ export const collectionService = {
         take: pageSize + 1,
         cursor: { id: query.cursor },
         skip: 1,
-        orderBy: { [sort]: order },
+        orderBy: [{ [sort]: order }, { id: 'asc' }],
         include: {
           _count: {
             select: { media: true },
@@ -83,7 +83,7 @@ export const collectionService = {
         where,
         skip,
         take: pageSize,
-        orderBy: { [sort]: order },
+        orderBy: [{ [sort]: order }, { id: 'asc' }],
         include: {
           _count: {
             select: { media: true },
@@ -145,7 +145,7 @@ export const collectionService = {
     const memberAccess: Prisma.CollectionWhereInput = {
       OR: [
         { ownerId: userId },
-        { members: { some: { userId } } },
+        { members: { some: { userId, accepted: true } } },
       ],
     };
 
@@ -372,6 +372,20 @@ export const collectionService = {
     try {
       await this.requireCollectionRole(collectionId, userId, [CollectionRole.OWNER, CollectionRole.COLLABORATOR]);
 
+      // Verify the collectionMedia belongs to this collection
+      const existing = await prisma.collectionMedia.findUnique({
+        where: { id: collectionMediaId },
+        select: { collectionId: true },
+      });
+
+      if (!existing) {
+        throw new AppError('Collection media not found', 404);
+      }
+
+      if (existing.collectionId !== collectionId) {
+        throw new AppError('Collection media not found', 404);
+      }
+
       const collectionMedia = await prisma.collectionMedia.update({
         where: { id: collectionMediaId },
         data,
@@ -400,6 +414,20 @@ export const collectionService = {
   ): Promise<boolean> {
     try {
       await this.requireCollectionRole(collectionId, userId, [CollectionRole.OWNER, CollectionRole.COLLABORATOR]);
+
+      // Verify the collectionMedia belongs to this collection before deleting
+      const existing = await prisma.collectionMedia.findUnique({
+        where: { id: collectionMediaId },
+        select: { collectionId: true },
+      });
+
+      if (!existing) {
+        throw new AppError('Collection media not found', 404);
+      }
+
+      if (existing.collectionId !== collectionId) {
+        throw new AppError('Collection media not found', 404);
+      }
 
       await prisma.collectionMedia.delete({
         where: { id: collectionMediaId },
@@ -506,6 +534,20 @@ export const collectionService = {
     try {
       await this.requireCollectionRole(collectionId, userId, [CollectionRole.OWNER]);
 
+      // Verify the member belongs to this collection
+      const existing = await prisma.collectionUser.findUnique({
+        where: { id: memberId },
+        select: { collectionId: true },
+      });
+
+      if (!existing) {
+        throw new AppError('Collection member not found', 404);
+      }
+
+      if (existing.collectionId !== collectionId) {
+        throw new AppError('Collection member not found', 404);
+      }
+
       const collectionUser = await prisma.collectionUser.update({
         where: { id: memberId },
         data,
@@ -535,6 +577,20 @@ export const collectionService = {
     try {
       await this.requireCollectionRole(collectionId, userId, [CollectionRole.OWNER]);
 
+      // Verify the member belongs to this collection before deleting
+      const existing = await prisma.collectionUser.findUnique({
+        where: { id: memberId },
+        select: { collectionId: true },
+      });
+
+      if (!existing) {
+        throw new AppError('Collection member not found', 404);
+      }
+
+      if (existing.collectionId !== collectionId) {
+        throw new AppError('Collection member not found', 404);
+      }
+
       await prisma.collectionUser.delete({
         where: { id: memberId },
       });
@@ -563,7 +619,7 @@ export const collectionService = {
         id: true,
         ownerId: true,
         members: {
-          where: { userId },
+          where: { userId, accepted: true },
           select: { role: true },
         },
       },
