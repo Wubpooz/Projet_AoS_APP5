@@ -6,17 +6,17 @@ export const createCollectionSchema = z.object({
   name: z.string().min(1).max(200).meta({ example: 'My Favorites' }),
   description: z.string().max(1000).optional().meta({ example: 'A collection of my favorite movies' }),
   tags: z.array(z.string().max(50)).optional().meta({ example: ['favorites', 'movies'] }),
-  visibility: z.nativeEnum(Visibility).optional().default(Visibility.PRIVATE).meta({ example: Visibility.PUBLIC }),
-}) satisfies z.Schema<Prisma.CollectionCreateInput>;
+  visibility: z.enum(Visibility).optional().default(Visibility.PRIVATE).meta({ example: Visibility.PUBLIC }),
+}) satisfies z.Schema<Omit<Prisma.CollectionCreateInput, 'owner' | 'ownerId'>>;
 
 export const collectionResponseSchema = z.object({
   id: z.uuid(),
   name: z.string().meta({ example: 'My Favorites' }),
   description: z.string().nullable().meta({ example: 'A collection of my favorite movies' }),
   tags: z.array(z.string()).meta({ example: ['favorites', 'movies'] }),
-  visibility: z.nativeEnum(Visibility).meta({ example: Visibility.PUBLIC }),
-  createdAt: z.string().datetime().meta({ example: '2026-01-01T00:00:00.000Z' }).transform(str => new Date(str)),
-  updatedAt: z.string().datetime().meta({ example: '2026-01-01T00:00:00.000Z' }).transform(str => new Date(str)),
+  visibility: z.enum(Visibility).meta({ example: Visibility.PUBLIC }),
+  createdAt: z.string().datetime({ message: 'Invalid datetime string' }).meta({ example: '2026-01-01T00:00:00.000Z' }).transform((str: string) => new Date(str)),
+  updatedAt: z.string().datetime({ message: 'Invalid datetime string' }).meta({ example: '2026-01-01T00:00:00.000Z' }).transform((str: string) => new Date(str)),
   ownerId: z.string(),
   media: z.array(z.any()).optional(),
   members: z.array(z.any()).optional(),
@@ -31,7 +31,7 @@ export const updateCollectionSchema = z.object({
   name: z.string().min(1).max(200).optional().meta({ example: 'My Favorites' }),
   description: z.string().max(1000).optional().meta({ example: 'Updated description' }),
   tags: z.array(z.string().max(50)).optional().meta({ example: ['favorites', 'movies'] }),
-  visibility: z.nativeEnum(Visibility).optional().meta({ example: Visibility.PUBLIC }),
+  visibility: z.enum(Visibility).optional().meta({ example: Visibility.PUBLIC }),
 }) satisfies z.Schema<Prisma.CollectionUpdateInput>;
 
 export const collectionIdParamSchema = z.object({
@@ -44,7 +44,7 @@ export const getCollectionQuerySchema = z.object({
   tag: z.string().optional().meta({ example: 'favorites' }),
   tags: z.string().optional().meta({ example: 'favorites,movies' }),
   q: z.string().optional().meta({ example: 'my favorites' }),
-  sort: z.enum(['createdAt', 'name', 'updatedAt']).optional().default('createdAt').meta({ example: 'createdAt' }),
+  sort: z.union([z.literal('createdAt'), z.literal('name'), z.literal('updatedAt')]).optional().default('createdAt').meta({ example: 'createdAt' }),
   order: z.enum(['asc', 'desc']).optional().default('desc').meta({ example: 'desc' }),
   cursor: z.string().optional(),
 });
@@ -65,7 +65,7 @@ export const collectionListResponseSchema = z.object({
 
 // Collection Media schemas
 export const addMediaToCollectionSchema = z.object({
-  mediaId: z.string().uuid().meta({ example: 'media_123' }),
+  mediaId: z.uuid().meta({ example: 'media_123' }),
   position: z.number().optional().default(0).meta({ example: 3 }),
 });
 
@@ -77,7 +77,7 @@ export const collectionMediaIdParamSchema = z.object({
 export const collectionMediaResponseSchema = z.object({
   id: z.uuid(),
   position: z.number(),
-  addedAt: z.string().datetime().meta({ example: '2026-01-01T00:00:00.000Z' }).transform(str => new Date(str)),
+  addedAt: z.string().datetime({ message: 'Invalid datetime string' }).meta({ example: '2026-01-01T00:00:00.000Z' }).transform((str: string) => new Date(str)),
   collectionId: z.string(),
   mediaId: z.string(),
   media: z.any().optional(),
@@ -89,8 +89,8 @@ export const updateCollectionMediaSchema = z.object({
 
 // Collection Members schemas
 export const addMemberToCollectionSchema = z.object({
-  userId: z.string().uuid().meta({ example: 'user_123' }),
-  role: z.nativeEnum(CollectionRole).optional().default(CollectionRole.READER).meta({ example: CollectionRole.COLLABORATOR }),
+  userId: z.uuid().meta({ example: 'user_123' }),
+  role: z.enum(CollectionRole).optional().default(CollectionRole.READER).meta({ example: CollectionRole.COLLABORATOR }),
 });
 
 export const collectionMemberIdParamSchema = z.object({
@@ -100,8 +100,8 @@ export const collectionMemberIdParamSchema = z.object({
 
 export const collectionMemberResponseSchema = z.object({
   id: z.uuid(),
-  role: z.nativeEnum(CollectionRole).meta({ example: CollectionRole.READER }),
-  invitedAt: z.string().datetime().meta({ example: '2026-01-01T00:00:00.000Z' }).transform(str => new Date(str)),
+  role: z.enum(CollectionRole).meta({ example: CollectionRole.READER }),
+  invitedAt: z.string().datetime({ message: 'Invalid datetime string' }).meta({ example: '2026-01-01T00:00:00.000Z' }).transform((str: string) => new Date(str)),
   accepted: z.boolean(),
   collectionId: z.string(),
   userId: z.string(),
@@ -109,7 +109,7 @@ export const collectionMemberResponseSchema = z.object({
 }) satisfies z.Schema<CollectionUser>;
 
 export const updateCollectionMemberSchema = z.object({
-  role: z.nativeEnum(CollectionRole).optional().meta({ example: CollectionRole.COLLABORATOR }),
+  role: z.enum(CollectionRole).optional().meta({ example: CollectionRole.COLLABORATOR }),
   accepted: z.boolean().optional().meta({ example: true }),
 });
 
@@ -120,8 +120,8 @@ export const respondToInvitationSchema = z.object({
 
 export const invitationResponseSchema = z.object({
   id: z.uuid(),
-  role: z.nativeEnum(CollectionRole).meta({ example: CollectionRole.READER }),
-  invitedAt: z.string().datetime().meta({ example: '2026-01-01T00:00:00.000Z' }).transform(str => new Date(str)),
+  role: z.enum(CollectionRole).meta({ example: CollectionRole.READER }),
+  invitedAt: z.string().datetime({ message: 'Invalid datetime string' }).meta({ example: '2026-01-01T00:00:00.000Z' }).transform((str: string) => new Date(str)),
   accepted: z.boolean(),
   collectionId: z.string(),
   userId: z.string(),

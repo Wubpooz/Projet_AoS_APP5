@@ -97,7 +97,7 @@ collectionRoutes.get(
   async (c) => {
     const query = c.req.valid('query');
     const sessionUser = c.get('user');
-    const result = await collectionService.listCollections(query, sessionUser?.id);
+    const result = await collectionService.listCollections(query as any, sessionUser?.id);
     return c.json(result, 200);
   }
 );
@@ -116,8 +116,8 @@ collectionRoutes.get(
           'application/json': {
             schema: {
               type: 'array',
-              items: resolver(invitationResponseSchema),
-            },
+              items: { $ref: '#/components/schemas/CollectionUser' },
+            } as any,
           },
         },
       },
@@ -352,8 +352,8 @@ collectionRoutes.get(
           'application/json': {
             schema: {
               type: 'array',
-              items: resolver(collectionMediaResponseSchema),
-            },
+              items: { $ref: '#/components/schemas/CollectionMedia' },
+            } as any,
           },
         },
       },
@@ -557,8 +557,8 @@ collectionRoutes.get(
           'application/json': {
             schema: {
               type: 'array',
-              items: resolver(collectionMemberResponseSchema),
-            },
+              items: { $ref: '#/components/schemas/CollectionUser' },
+            } as any,
           },
         },
       },

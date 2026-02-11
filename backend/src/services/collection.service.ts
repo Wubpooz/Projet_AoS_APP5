@@ -11,7 +11,7 @@ export const collectionService = {
    * Create a new collection
    */
   async createCollection(
-    data: Prisma.CollectionCreateInput,
+    data: Omit<Prisma.CollectionCreateInput, 'owner' | 'ownerId'>,
     userId: string
   ): Promise<Collection> {
     try {
