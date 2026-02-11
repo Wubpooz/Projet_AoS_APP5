@@ -17,6 +17,8 @@ import {
   collectionMemberIdParamSchema,
   collectionMemberResponseSchema,
   updateCollectionMemberSchema,
+  respondToInvitationSchema,
+  invitationResponseSchema,
 } from '@/schemas/collection.schema';
 import { AppError } from '@/middleware/errorHandler';
 import { CollectionRole } from '@/generated/prisma/client';
@@ -453,12 +455,12 @@ collectionRoutes.delete(
 
 // ==================== Collection Members Routes ====================
 
-// POST /:collectionId/members - Add member to collection
+// POST /:collectionId/members - Invite member to collection
 collectionRoutes.post(
   '/:collectionId/members',
   describeRoute({
     tags: ['Collections'],
-    description: 'Add member to collection (owner only)',
+    description: 'Invite a user to join the collection (owner only). Creates a pending invitation that must be accepted by the user.',
     security: [{ bearerAuth: [] }],
     parameters: [
       { name: 'collectionId', in: 'path', required: true, schema: { type: 'string' }, example: 'col_123' },
@@ -471,7 +473,7 @@ collectionRoutes.post(
     },
     responses: {
       201: {
-        description: 'Member added to collection',
+        description: 'Invitation created successfully. User must accept before gaining access.',
         content: {
           'application/json': {
             schema: resolver(collectionMemberResponseSchema),
@@ -653,5 +655,96 @@ collectionRoutes.delete(
     }
 
     return c.json({ message: 'Member removed from collection successfully' }, 200);
+  }
+);
+
+// ==================== Invitation Workflow Routes ====================
+
+// GET /invitations - List user's pending invitations
+collectionRoutes.get(
+  '/invitations',
+  describeRoute({
+    tags: ['Collections'],
+    description: 'List pending collection invitations for the authenticated user',
+    security: [{ bearerAuth: [] }],
+    responses: {
+      200: {
+        description: 'List of pending invitations',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'array',
+              items: resolver(invitationResponseSchema),
+            },
+          },
+        },
+      },
+      401: { description: 'Unauthorized' },
+    },
+  }),
+  async (c) => {
+    const sessionUser = c.get('user');
+    if (!sessionUser) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const invitations = await collectionService.listUserInvitations(sessionUser.id);
+    return c.json(invitations, 200);
+  }
+);
+
+// POST /:collectionId/invitations/respond - Accept or reject an invitation
+collectionRoutes.post(
+  '/:collectionId/invitations/respond',
+  describeRoute({
+    tags: ['Collections'],
+    description: 'Accept or reject a collection invitation',
+    security: [{ bearerAuth: [] }],
+    parameters: [
+      { name: 'collectionId', in: 'path', required: true, schema: { type: 'string' }, example: 'col_123' },
+    ],
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {},
+      },
+    },
+    responses: {
+      200: {
+        description: 'Invitation accepted',
+        content: {
+          'application/json': {
+            schema: resolver(invitationResponseSchema),
+          },
+        },
+      },
+      204: { description: 'Invitation rejected' },
+      400: { description: 'Invalid payload or invitation already accepted' },
+      401: { description: 'Unauthorized' },
+      404: { description: 'Invitation not found' },
+    },
+  }),
+  validator('param', collectionIdParamSchema),
+  validator('json', respondToInvitationSchema),
+  async (c) => {
+    const sessionUser = c.get('user');
+    if (!sessionUser) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const { collectionId } = c.req.valid('param');
+    const { accept } = c.req.valid('json');
+
+    const result = await collectionService.respondToInvitation(
+      collectionId,
+      sessionUser.id,
+      accept
+    );
+
+    if (accept && result) {
+      return c.json(result, 200);
+    } else {
+      return c.body(null, 204);
+    }
   }
 );

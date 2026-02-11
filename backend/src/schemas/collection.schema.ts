@@ -112,3 +112,19 @@ export const updateCollectionMemberSchema = z.object({
   role: z.nativeEnum(CollectionRole).optional().meta({ example: CollectionRole.COLLABORATOR }),
   accepted: z.boolean().optional().meta({ example: true }),
 });
+
+// Invitation schemas
+export const respondToInvitationSchema = z.object({
+  accept: z.boolean().meta({ example: true }),
+});
+
+export const invitationResponseSchema = z.object({
+  id: z.uuid(),
+  role: z.nativeEnum(CollectionRole).meta({ example: CollectionRole.READER }),
+  invitedAt: z.string().datetime().meta({ example: '2026-01-01T00:00:00.000Z' }).transform(str => new Date(str)),
+  accepted: z.boolean(),
+  collectionId: z.string(),
+  userId: z.string(),
+  collection: z.any().optional(),
+  user: z.any().optional(),
+});

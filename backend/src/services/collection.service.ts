@@ -606,6 +606,96 @@ export const collectionService = {
   },
 
   /**
+   * List pending invitations for a user
+   */
+  async listUserInvitations(userId: string): Promise<CollectionUser[]> {
+    try {
+      return await prisma.collectionUser.findMany({
+        where: {
+          userId,
+          accepted: false,
+        },
+        include: {
+          collection: true,
+          user: true,
+        },
+        orderBy: {
+          invitedAt: 'desc',
+        },
+      });
+    } catch (error) {
+      console.error('Error listing user invitations:', error);
+      throw new AppError('Failed to list invitations', 500);
+    }
+  },
+
+  /**
+   * Accept or reject a collection invitation
+   */
+  async respondToInvitation(
+    collectionId: string,
+    userId: string,
+    accept: boolean
+  ): Promise<CollectionUser | null> {
+    try {
+      // Find the invitation
+      const invitation = await prisma.collectionUser.findUnique({
+        where: {
+          collectionId_userId: {
+            collectionId,
+            userId,
+          },
+        },
+      });
+
+      if (!invitation) {
+        throw new AppError('Invitation not found', 404);
+      }
+
+      if (invitation.accepted) {
+        throw new AppError('Invitation already accepted', 400);
+      }
+
+      if (accept) {
+        // Accept the invitation
+        const updatedMember = await prisma.collectionUser.update({
+          where: {
+            collectionId_userId: {
+              collectionId,
+              userId,
+            },
+          },
+          data: {
+            accepted: true,
+          },
+          include: {
+            collection: true,
+            user: true,
+          },
+        });
+        return updatedMember;
+      } else {
+        // Reject the invitation by deleting the record
+        await prisma.collectionUser.delete({
+          where: {
+            collectionId_userId: {
+              collectionId,
+              userId,
+            },
+          },
+        });
+        return null;
+      }
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      console.error('Error responding to invitation:', error);
+      throw new AppError('Failed to respond to invitation', 500);
+    }
+  },
+
+  /**
    * Require a minimum role to perform an action on a collection
    */
   async requireCollectionRole(
