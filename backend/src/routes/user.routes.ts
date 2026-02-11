@@ -183,3 +183,6 @@ userRoutes.get(
     return c.json({ collections }, 200);
   }
 )
+
+
+// TODO POST /:userId/invite/:collectionId - Invite a user to collaborate on a collection (by user ID and collection ID)
