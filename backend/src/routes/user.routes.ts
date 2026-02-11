@@ -182,4 +182,4 @@ userRoutes.get(
     }
     return c.json({ collections }, 200);
   }
-)
+);

@@ -2,20 +2,19 @@ import prisma from "@/db";
 import { CollectionRole, Visibility } from "@/generated/prisma/browser";
 import type { Prisma, Media } from "@/generated/prisma/browser";
 import { AppError } from "@/middleware/errorHandler";
-import type { ListQuery, MediaWhereClause, PaginatedData, PaginationLinks } from "@/types/types";
+import type { ListQuery, MediaWhereClause, PaginatedData } from "@/types/types";
+import { queryUtils } from "@/services/query.utils";
 
 export const mediaService = {
   /**
    * Create a new media entry in the database
    * @param {Prisma.MediaCreateInput} data Data for the new media entry
+   * @param {string} userId ID of the authenticated user creating the media
+   * @param {string} [collectionId] Optional collection ID to add the media to
    * @returns {Promise<Media>} The created media object
    * @throws AppError if media creation fails
    */
-  async createMedia(
-    data: Prisma.MediaCreateInput,
-    userId: string,
-    collectionId?: string
-  ): Promise<Media> {
+  async createMedia( data: Prisma.MediaCreateInput, userId: string, collectionId?: string): Promise<Media> {
     try {
       const collection = await this.getCollectionForCreate(userId, collectionId);
       const newMedia = await prisma.$transaction(async (tx) => {
@@ -40,18 +39,16 @@ export const mediaService = {
 
   /**
    * List media entries with pagination and filters
-   * @param {Object} query Query parameters for filtering and pagination
-   * @param {number} query.page Page number for pagination
-   * @param {number} query.pageSize Number of items per page
-   * @param {string} query.type Filter by media type
-   * @param {string} query.cursor Cursor for cursor-based pagination
+   * @param {ListQuery} query Query parameters for filtering and pagination
+   * @param {string} [userId] Optional authenticated user ID for access control
+   * @returns {Promise<PaginatedData<Media>>} Paginated list of media entries matching the query and access control
    */
   async listMedia(query: ListQuery, userId?: string): Promise<PaginatedData<Media>> {
     const pageSize = query.pageSize || 20;
     const sort = query.sort || 'createdAt';
     const order = query.order || 'desc';
     const filterWhere = this.buildWhereClause(query);
-    const accessWhere = this.buildAccessWhere(userId);
+    const accessWhere = queryUtils.buildMediaAccessWhere(userId);
     const where = Object.keys(filterWhere).length > 0
       ? { AND: [filterWhere, accessWhere] }
       : accessWhere;
@@ -72,7 +69,7 @@ export const mediaService = {
       const nextCursor = hasMore && lastItem ? lastItem.id : null;
 
       // For cursor-based pagination, we don't calculate total/pages as it's expensive
-      const links = this.buildCursorPaginationLinks(query, pageSize, nextCursor);
+      const links = queryUtils.buildCursorPaginationLinks('/api/media', query, pageSize, nextCursor);
 
       return {
         data: items,
@@ -102,7 +99,7 @@ export const mediaService = {
     const pages = Math.ceil(total / pageSize);
     const lastItem = data.at(-1);
     const nextCursor = lastItem ? lastItem.id : null;
-    const links = this.buildPaginationLinks(query, page, pageSize, pages);
+    const links = queryUtils.buildPaginationLinks('/api/media', query, page, pageSize, pages);
 
     return {
       data,
@@ -127,12 +124,12 @@ export const mediaService = {
       where.type = query.type as any;
     }
 
-    const tagList = this.parseCommaSeparated(query.tags, query.tag);
+    const tagList = queryUtils.parseCommaSeparated(query.tags, query.tag);
     if (tagList.length > 0) {
       where.tags = { hasSome: tagList };
     }
 
-    const platformList = this.parseCommaSeparated(query.platforms, query.platform);
+    const platformList = queryUtils.parseCommaSeparated(query.platforms, query.platform);
     if (platformList.length > 0) {
       where.platforms = { hasSome: platformList };
     }
@@ -147,141 +144,16 @@ export const mediaService = {
     return where;
   },
 
-  /**
-   * Build access control where clause for media visibility
-   * @param {string | undefined} userId Authenticated user ID (optional)
-   * @returns {Prisma.MediaWhereInput} Prisma where clause for access control
-   */
-  buildAccessWhere(userId?: string): Prisma.MediaWhereInput {
-    const publicAccess: Prisma.MediaWhereInput = {
-      collections: {
-        some: {
-          collection: {
-            visibility: Visibility.PUBLIC,
-          },
-        },
-      },
-    };
 
-    if (!userId) {
-      return publicAccess;
-    }
-
-    const memberAccess: Prisma.MediaWhereInput = {
-      collections: {
-        some: {
-          collection: {
-            OR: [
-              { ownerId: userId },
-              { members: { some: { userId } } },
-            ],
-          },
-        },
-      },
-    };
-
-    return { OR: [publicAccess, memberAccess] };
-  },
-
-  /**
-   * Parse comma-separated strings into an array, or return a single value as an array
-   * @param {string} commaSeparated A comma-separated string to parse
-   * @param {string} single A single string value to return as an array if commaSeparated is not provided
-   * @returns {string[]} An array of strings parsed from the input
-   */
-  parseCommaSeparated(commaSeparated?: string, single?: string): string[] {
-    if (commaSeparated) {
-      return commaSeparated.split(',');
-    }
-    if (single) {
-      return [single];
-    }
-    return [];
-  },
-
-  /**
-   * Build pagination links for API responses based on the current query and pagination state
-   * @param {ListQuery} query Query parameters for filtering and pagination
-   * @param {number} page Current page number
-   * @param {number} pageSize Number of items per page
-   * @param {number} pages Total number of pages
-   * @returns {PaginationLinks} An object containing self, next, and prev pagination links
-   */
-  buildPaginationLinks(query: ListQuery, page: number, pageSize: number, pages: number): PaginationLinks {
-    const baseUrl = '/api/media';
-    const queryParams = new URLSearchParams();
-    
-    if (query.type) queryParams.set('type', query.type);
-    if (query.tag) queryParams.set('tag', query.tag);
-    if (query.tags) queryParams.set('tags', query.tags);
-    if (query.platform) queryParams.set('platform', query.platform);
-    if (query.platforms) queryParams.set('platforms', query.platforms);
-    if (query.q) queryParams.set('q', query.q);
-    if (query.sort) queryParams.set('sort', query.sort);
-    if (query.order) queryParams.set('order', query.order);
-
-    const buildLink = (p: number) => {
-      const params = new URLSearchParams(queryParams);
-      params.set('page', p.toString());
-      params.set('pageSize', pageSize.toString());
-      return `${baseUrl}?${params.toString()}`;
-    };
-
-    return {
-      self: buildLink(page),
-      next: page < pages ? buildLink(page + 1) : null,
-      prev: page > 1 ? buildLink(page - 1) : null,
-    };
-  },
-
-  /**
-   * Build cursor-based pagination links for API responses
-   * @param {ListQuery} query Query parameters for filtering and pagination
-   * @param {number} pageSize Number of items per page
-   * @param {string | null} nextCursor Cursor for the next page
-   * @returns {PaginationLinks} An object containing self, next, and prev pagination links
-   */
-  buildCursorPaginationLinks(query: ListQuery, pageSize: number, nextCursor: string | null): PaginationLinks {
-    const baseUrl = '/api/media';
-    const queryParams = new URLSearchParams();
-    
-    if (query.type) queryParams.set('type', query.type);
-    if (query.tag) queryParams.set('tag', query.tag);
-    if (query.tags) queryParams.set('tags', query.tags);
-    if (query.platform) queryParams.set('platform', query.platform);
-    if (query.platforms) queryParams.set('platforms', query.platforms);
-    if (query.q) queryParams.set('q', query.q);
-    if (query.sort) queryParams.set('sort', query.sort);
-    if (query.order) queryParams.set('order', query.order);
-    queryParams.set('pageSize', pageSize.toString());
-
-    const buildSelfLink = () => {
-      const params = new URLSearchParams(queryParams);
-      if (query.cursor) params.set('cursor', query.cursor);
-      return `${baseUrl}?${params.toString()}`;
-    };
-
-    const buildNextLink = () => {
-      if (!nextCursor) return null;
-      const params = new URLSearchParams(queryParams);
-      params.set('cursor', nextCursor);
-      return `${baseUrl}?${params.toString()}`;
-    };
-
-    return {
-      self: buildSelfLink(),
-      next: buildNextLink(),
-      prev: null, // Cursor-based pagination typically doesn't support prev
-    };
-  },
 
   /**
    * Get a media entry by ID
    * @param {string} id Media ID
+   * @param {string} [userId] Optional authenticated user ID for access control
    * @returns {Promise<Media | null>} The media object if found, or null if not found
    */
   async getById(id: string, userId?: string): Promise<Media | null> {
-    const accessWhere = this.buildAccessWhere(userId);
+    const accessWhere = queryUtils.buildMediaAccessWhere(userId);
     return await prisma.media.findFirst({
       where: {
         AND: [
@@ -296,6 +168,7 @@ export const mediaService = {
    * Update a media entry by ID
    * @param {string} id Media ID
    * @param {Prisma.MediaUpdateInput} data Data to update the media entry with
+   * @param {string} userId ID of the user performing the update
    * @returns {Promise<Media | null>} The updated media object if successful, or null if an error occurred
    */
   async updateById(id: string, data: Prisma.MediaUpdateInput, userId: string): Promise<Media | null> {
@@ -315,6 +188,7 @@ export const mediaService = {
   /**
    * Delete a media entry by ID
    * @param {string} id Media ID
+   * @param {string} userId ID of the user performing the deletion
    * @returns {Promise<boolean>} True if the media was successfully deleted, false otherwise
    */
   async deleteById(id: string, userId: string): Promise<boolean> {
@@ -333,6 +207,10 @@ export const mediaService = {
 
   /**
    * Resolve a collection for media creation, ensuring the user can write to it
+   * @param {string} userId ID of the authenticated user creating the media
+   * @param {string} [collectionId] Optional collection ID to add the media to
+   * @returns {Promise<{ id: string }>} The collection ID to use for media creation
+   * @throws AppError if the collection is not found or the user does not have permission to create media in it
    */
   async getCollectionForCreate(userId: string, collectionId?: string): Promise<{ id: string }> {
     if (collectionId) {
@@ -373,6 +251,8 @@ export const mediaService = {
 
   /**
    * Ensure every user has a default collection for personal media
+   * @param {string} userId ID of the authenticated user
+   * @returns {Promise<{ id: string }>} The default collection ID
    */
   async getOrCreateDefaultCollection(userId: string): Promise<{ id: string }> {
     const existing = await prisma.collection.findFirst({
@@ -398,12 +278,13 @@ export const mediaService = {
 
   /**
    * Require a minimum role to update/delete a media entry
+   * @param {string} mediaId Media ID
+   * @param {string} userId ID of the authenticated user
+   * @param {CollectionRole[]} allowedRoles Array of allowed roles for the operation
+   * @returns {Promise<void>} Resolves if the user has the required role, otherwise throws an AppError
+   * @throws AppError with status 403 if the user does not have permission, or 404 if the media is not found
    */
-  async requireMediaRole(
-    mediaId: string,
-    userId: string,
-    allowedRoles: CollectionRole[]
-  ): Promise<void> {
+  async requireMediaRole(mediaId: string, userId: string, allowedRoles: CollectionRole[]): Promise<void> {
     const media = await prisma.media.findUnique({
       where: { id: mediaId },
       select: {

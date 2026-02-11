@@ -13,6 +13,7 @@ import prisma from './db/index';
 import { authRoutes } from './routes/auth.routes.ts';
 import { userRoutes } from './routes/user.routes';
 import { mediaRoutes } from './routes/media.routes';
+import { collectionRoutes } from './routes/collection.routes';
 
 
 
@@ -118,6 +119,7 @@ app.get(
         { name: 'Auth', description: 'Authentication endpoints' },
         { name: 'Users', description: 'User profile endpoints' },
         { name: 'Media', description: 'Media management endpoints' },
+        { name: 'Collections', description: 'Collection management endpoints' },
       ],
       components: {
         securitySchemes: {
@@ -177,6 +179,7 @@ app.get('/health', async (c) => {
 app.route('/api/auth', authRoutes);
 app.route('/api/users', userRoutes);
 app.route('/api/media', mediaRoutes);
+app.route('/api/collections', collectionRoutes);
 
 // Better-Auth handler for built-in endpoints (OAuth, etc.)
 // Mounted after custom routes - use catch-all for anything not matched above
