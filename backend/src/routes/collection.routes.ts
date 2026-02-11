@@ -102,6 +102,39 @@ collectionRoutes.get(
   }
 );
 
+// GET /invitations - List user's pending invitations
+collectionRoutes.get(
+  '/invitations',
+  describeRoute({
+    tags: ['Collections'],
+    description: 'List pending collection invitations for the authenticated user',
+    security: [{ bearerAuth: [] }],
+    responses: {
+      200: {
+        description: 'List of pending invitations',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'array',
+              items: resolver(invitationResponseSchema),
+            },
+          },
+        },
+      },
+      401: { description: 'Unauthorized' },
+    },
+  }),
+  async (c) => {
+    const sessionUser = c.get('user');
+    if (!sessionUser) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const invitations = await collectionService.listUserInvitations(sessionUser.id);
+    return c.json(invitations, 200);
+  }
+);
+
 // GET /:collectionId - Get collection details
 collectionRoutes.get(
   '/:collectionId',
@@ -659,39 +692,6 @@ collectionRoutes.delete(
 );
 
 // ==================== Invitation Workflow Routes ====================
-
-// GET /invitations - List user's pending invitations
-collectionRoutes.get(
-  '/invitations',
-  describeRoute({
-    tags: ['Collections'],
-    description: 'List pending collection invitations for the authenticated user',
-    security: [{ bearerAuth: [] }],
-    responses: {
-      200: {
-        description: 'List of pending invitations',
-        content: {
-          'application/json': {
-            schema: {
-              type: 'array',
-              items: resolver(invitationResponseSchema),
-            },
-          },
-        },
-      },
-      401: { description: 'Unauthorized' },
-    },
-  }),
-  async (c) => {
-    const sessionUser = c.get('user');
-    if (!sessionUser) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-
-    const invitations = await collectionService.listUserInvitations(sessionUser.id);
-    return c.json(invitations, 200);
-  }
-);
 
 // POST /:collectionId/invitations/respond - Accept or reject an invitation
 collectionRoutes.post(
