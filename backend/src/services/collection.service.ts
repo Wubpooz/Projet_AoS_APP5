@@ -9,11 +9,11 @@ type CollectionWhereClause = Omit<ListQuery, 'page' | 'pageSize' | 'sort' | 'ord
 export const collectionService = {
   /**
    * Create a new collection
+   * @param {Omit<Prisma.CollectionCreateInput, 'owner' | 'ownerId'>} data Collection creation data
+   * @param {string} userId ID of the user creating the collection
+   * @returns {Promise<Collection>} The created collection
    */
-  async createCollection(
-    data: Omit<Prisma.CollectionCreateInput, 'owner' | 'ownerId'>,
-    userId: string
-  ): Promise<Collection> {
+  async createCollection(data: Omit<Prisma.CollectionCreateInput, 'owner' | 'ownerId'>, userId: string): Promise<Collection> {
     try {
       const collection = await prisma.collection.create({
         data: {
@@ -30,6 +30,9 @@ export const collectionService = {
 
   /**
    * List collections with pagination and filters
+   * @param {ListQuery} query Query parameters for listing collections
+   * @param {string} [userId] Optional user ID for access control
+   * @returns {Promise<PaginatedData<Collection>>} Paginated list of collections
    */
   async listCollections(query: ListQuery, userId?: string): Promise<PaginatedData<Collection>> {
     const pageSize = query.pageSize || 20;
@@ -111,6 +114,8 @@ export const collectionService = {
 
   /**
    * Build where clause for collection filters
+   * @param {CollectionWhereClause} query Query parameters containing tag, tags, and search text
+   * @returns {Prisma.CollectionWhereInput} Where clause for Prisma query
    */
   buildWhereClause(query: CollectionWhereClause): Prisma.CollectionWhereInput {
     const where: Prisma.CollectionWhereInput = {};
@@ -132,6 +137,8 @@ export const collectionService = {
 
   /**
    * Build access control where clause for collection visibility
+   * @param {string} [userId] Optional user ID for permission checking
+   * @returns {Prisma.CollectionWhereInput} Where clause that filters by visibility and user access
    */
   buildAccessWhere(userId?: string): Prisma.CollectionWhereInput {
     const publicAccess: Prisma.CollectionWhereInput = {
@@ -154,6 +161,9 @@ export const collectionService = {
 
   /**
    * Parse comma-separated strings into an array
+   * @param {string} [commaSeparated] Comma-separated string to split into array
+   * @param {string} [single] Single string value as fallback
+   * @returns {string[]} Array of parsed strings
    */
   parseCommaSeparated(commaSeparated?: string, single?: string): string[] {
     if (commaSeparated) {
@@ -167,6 +177,11 @@ export const collectionService = {
 
   /**
    * Build pagination links for API responses
+   * @param {ListQuery} query Query parameters
+   * @param {number} page Current page number
+   * @param {number} pageSize Number of items per page
+   * @param {number} pages Total number of pages
+   * @returns {PaginationLinks} Object containing self, next, and prev links
    */
   buildPaginationLinks(query: ListQuery, page: number, pageSize: number, pages: number): PaginationLinks {
     const baseUrl = '/api/collections';
@@ -194,6 +209,10 @@ export const collectionService = {
 
   /**
    * Build cursor-based pagination links
+   * @param {ListQuery} query Query parameters
+   * @param {number} pageSize Number of items to fetch
+   * @param {string | null} nextCursor Cursor for next page
+   * @returns {PaginationLinks} Object containing self and next links
    */
   buildCursorPaginationLinks(query: ListQuery, pageSize: number, nextCursor: string | null): PaginationLinks {
     const baseUrl = '/api/collections';
@@ -227,7 +246,10 @@ export const collectionService = {
   },
 
   /**
-   * Get a collection by ID
+   * Get a collection by ID with access control
+   * @param {string} id Collection ID
+   * @param {string} [userId] Optional user ID for permission checking
+   * @returns {Promise<Collection | null>} The collection or null if not found or not authorized
    */
   async getById(id: string, userId?: string): Promise<Collection | null> {
     const accessWhere = this.buildAccessWhere(userId);
@@ -247,7 +269,12 @@ export const collectionService = {
   },
 
   /**
-   * Update a collection by ID
+   * Update a collection by ID (owner only)
+   * @param {string} id Collection ID
+   * @param {Prisma.CollectionUpdateInput} data Collection update data
+   * @param {string} userId ID of the user performing the update
+   * @returns {Promise<Collection | null>} Updated collection or null on error
+   * @throws {AppError} If user is not the owner or collection not found
    */
   async updateById(id: string, data: Prisma.CollectionUpdateInput, userId: string): Promise<Collection | null> {
     try {
@@ -264,7 +291,11 @@ export const collectionService = {
   },
 
   /**
-   * Delete a collection by ID
+   * Delete a collection by ID (owner only)
+   * @param {string} id Collection ID
+   * @param {string} userId ID of the user performing the deletion
+   * @returns {Promise<boolean>} True if deleted successfully, false on error
+   * @throws {AppError} If user is not the owner or collection not found
    */
   async deleteById(id: string, userId: string): Promise<boolean> {
     try {
@@ -281,7 +312,13 @@ export const collectionService = {
   },
 
   /**
-   * Add media to a collection
+   * Add media to a collection (owner/collaborator only)
+   * @param {string} collectionId Collection ID
+   * @param {string} mediaId Media ID to add
+   * @param {number} position Position in collection
+   * @param {string} userId ID of the user performing the action
+   * @returns {Promise<CollectionMedia>} The created collection media entry
+   * @throws {AppError} If media already in collection, media not found, or user unauthorized
    */
   async addMediaToCollection(
     collectionId: string,
@@ -334,7 +371,11 @@ export const collectionService = {
   },
 
   /**
-   * List media in a collection
+   * List media in a collection with access control
+   * @param {string} collectionId Collection ID
+   * @param {string} [userId] Optional user ID for permission checking
+   * @returns {Promise<CollectionMedia[]>} Array of media in collection
+   * @throws {AppError} If collection not found or user unauthorized
    */
   async listCollectionMedia(collectionId: string, userId?: string): Promise<CollectionMedia[]> {
     try {
@@ -361,14 +402,15 @@ export const collectionService = {
   },
 
   /**
-   * Update collection media
+   * Update collection media (owner/collaborator only)
+   * @param {string} collectionId Collection ID
+   * @param {string} collectionMediaId Collection media ID to update
+   * @param {Prisma.CollectionMediaUpdateInput} data Media update data
+   * @param {string} userId ID of the user performing the update
+   * @returns {Promise<CollectionMedia | null>} Updated collection media or null on error
+   * @throws {AppError} If collection media not found, belongs to different collection, or user unauthorized
    */
-  async updateCollectionMedia(
-    collectionId: string,
-    collectionMediaId: string,
-    data: Prisma.CollectionMediaUpdateInput,
-    userId: string
-  ): Promise<CollectionMedia | null> {
+  async updateCollectionMedia(collectionId: string, collectionMediaId: string, data: Prisma.CollectionMediaUpdateInput, userId: string): Promise<CollectionMedia | null> {
     try {
       await this.requireCollectionRole(collectionId, userId, [CollectionRole.OWNER, CollectionRole.COLLABORATOR]);
 
@@ -405,13 +447,14 @@ export const collectionService = {
   },
 
   /**
-   * Remove media from collection
+   * Remove media from collection (owner/collaborator only)
+   * @param {string} collectionId Collection ID
+   * @param {string} collectionMediaId Collection media ID to remove
+   * @param {string} userId ID of the user performing the removal
+   * @returns {Promise<boolean>} True if removed successfully, false on error
+   * @throws {AppError} If collection media not found, belongs to different collection, or user unauthorized
    */
-  async removeMediaFromCollection(
-    collectionId: string,
-    collectionMediaId: string,
-    userId: string
-  ): Promise<boolean> {
+  async removeMediaFromCollection(collectionId: string, collectionMediaId: string, userId: string): Promise<boolean> {
     try {
       await this.requireCollectionRole(collectionId, userId, [CollectionRole.OWNER, CollectionRole.COLLABORATOR]);
 
@@ -444,14 +487,15 @@ export const collectionService = {
   },
 
   /**
-   * Add member to collection
+   * Add member to collection (owner only)
+   * @param {string} collectionId Collection ID
+   * @param {string} memberUserId User ID of member to invite
+   * @param {CollectionRole} role Role to assign to the member
+   * @param {string} userId ID of the owner performing the invitation
+   * @returns {Promise<CollectionUser>} The created collection user invitation
+   * @throws {AppError} If user already member, user not found, or user not owner
    */
-  async addMemberToCollection(
-    collectionId: string,
-    memberUserId: string,
-    role: CollectionRole,
-    userId: string
-  ): Promise<CollectionUser> {
+  async addMemberToCollection(collectionId: string, memberUserId: string, role: CollectionRole, userId: string): Promise<CollectionUser> {
     try {
       await this.requireCollectionRole(collectionId, userId, [CollectionRole.OWNER]);
 
@@ -497,7 +541,11 @@ export const collectionService = {
   },
 
   /**
-   * List collection members
+   * List collection members with access control
+   * @param {string} collectionId Collection ID
+   * @param {string} [userId] Optional user ID for permission checking
+   * @returns {Promise<CollectionUser[]>} Array of collection members
+   * @throws {AppError} If collection not found or user unauthorized
    */
   async listCollectionMembers(collectionId: string, userId?: string): Promise<CollectionUser[]> {
     try {
@@ -523,14 +571,15 @@ export const collectionService = {
   },
 
   /**
-   * Update collection member
+   * Update collection member (owner only)
+   * @param {string} collectionId Collection ID
+   * @param {string} memberId Collection member ID to update
+   * @param {Prisma.CollectionUserUpdateInput} data Member update data
+   * @param {string} userId ID of the owner performing the update
+   * @returns {Promise<CollectionUser | null>} Updated collection member or null on error
+   * @throws {AppError} If member not found, belongs to different collection, or user not owner
    */
-  async updateCollectionMember(
-    collectionId: string,
-    memberId: string,
-    data: Prisma.CollectionUserUpdateInput,
-    userId: string
-  ): Promise<CollectionUser | null> {
+  async updateCollectionMember(collectionId: string, memberId: string, data: Prisma.CollectionUserUpdateInput, userId: string): Promise<CollectionUser | null> {
     try {
       await this.requireCollectionRole(collectionId, userId, [CollectionRole.OWNER]);
 
@@ -567,13 +616,14 @@ export const collectionService = {
   },
 
   /**
-   * Remove member from collection
+   * Remove member from collection (owner only)
+   * @param {string} collectionId Collection ID
+   * @param {string} memberId Collection member ID to remove
+   * @param {string} userId ID of the owner performing the removal
+   * @returns {Promise<boolean>} True if removed successfully, false on error
+   * @throws {AppError} If member not found, belongs to different collection, or user not owner
    */
-  async removeMemberFromCollection(
-    collectionId: string,
-    memberId: string,
-    userId: string
-  ): Promise<boolean> {
+  async removeMemberFromCollection(collectionId: string, memberId: string, userId: string): Promise<boolean> {
     try {
       await this.requireCollectionRole(collectionId, userId, [CollectionRole.OWNER]);
 
@@ -607,6 +657,9 @@ export const collectionService = {
 
   /**
    * List pending invitations for a user
+   * @param {string} userId User ID to get invitations for
+   * @returns {Promise<CollectionUser[]>} Array of pending invitations
+   * @throws {AppError} If unable to retrieve invitations
    */
   async listUserInvitations(userId: string): Promise<CollectionUser[]> {
     try {
@@ -631,12 +684,13 @@ export const collectionService = {
 
   /**
    * Accept or reject a collection invitation
+   * @param {string} collectionId Collection ID
+   * @param {string} userId User ID responding to invitation
+   * @param {boolean} accept True to accept, false to reject
+   * @returns {Promise<CollectionUser | null>} Updated member if accepted, null if rejected
+   * @throws {AppError} If invitation not found or already accepted
    */
-  async respondToInvitation(
-    collectionId: string,
-    userId: string,
-    accept: boolean
-  ): Promise<CollectionUser | null> {
+  async respondToInvitation(collectionId: string, userId: string, accept: boolean): Promise<CollectionUser | null> {
     try {
       // Find the invitation
       const invitation = await prisma.collectionUser.findUnique({
@@ -697,12 +751,13 @@ export const collectionService = {
 
   /**
    * Require a minimum role to perform an action on a collection
+   * @param {string} collectionId Collection ID to check permissions for
+   * @param {string} userId User ID to check permissions
+   * @param {CollectionRole[]} allowedRoles Array of roles that are allowed
+   * @returns {Promise<void>}
+   * @throws {AppError} If collection not found or user doesn't have required role
    */
-  async requireCollectionRole(
-    collectionId: string,
-    userId: string,
-    allowedRoles: CollectionRole[]
-  ): Promise<void> {
+  async requireCollectionRole(collectionId: string, userId: string, allowedRoles: CollectionRole[]): Promise<void> {
     const collection = await prisma.collection.findUnique({
       where: { id: collectionId },
       select: {

@@ -25,8 +25,6 @@ import { CollectionRole } from '@/generated/prisma/client';
 
 export const collectionRoutes = new Hono<{ Variables: AuthType }>();
 
-// ==================== Collection CRUD Routes ====================
-
 // POST / - Create a new collection
 collectionRoutes.post(
   '/',
