@@ -181,9 +181,14 @@ collectionRoutes.patch(
       return c.json({ error: 'No fields to update' }, 400);
     }
     
-    const collection = await collectionService.updateById(collectionId, data, sessionUser.id).catch(() => {
-      throw new AppError('Failed to update collection', 500);
-    });
+    const collection = await collectionService
+      .updateById(collectionId, data, sessionUser.id)
+      .catch((err) => {
+        if (err instanceof AppError) {
+          throw err;
+        }
+        throw new AppError('Failed to update collection', 500);
+      });
     
     if (!collection) {
       return c.json({ error: 'Collection not found' }, 404);
@@ -226,7 +231,10 @@ collectionRoutes.delete(
 
     const { collectionId } = c.req.valid('param');
 
-    const deleted = await collectionService.deleteById(collectionId, sessionUser.id).catch(() => {
+    const deleted = await collectionService.deleteById(collectionId, sessionUser.id).catch((err) => {
+      if (err instanceof AppError) {
+        throw err;
+      }
       throw new AppError('Failed to delete collection', 500);
     });
     
@@ -375,7 +383,10 @@ collectionRoutes.patch(
       collectionMediaId,
       data,
       sessionUser.id
-    ).catch(() => {
+    ).catch((err) => {
+      if (err instanceof AppError) {
+        throw err;
+      }
       throw new AppError('Failed to update collection media', 500);
     });
 
@@ -425,7 +436,10 @@ collectionRoutes.delete(
       collectionId,
       collectionMediaId,
       sessionUser.id
-    ).catch(() => {
+    ).catch((err) => {
+      if (err instanceof AppError) {
+        throw err;
+      }
       throw new AppError('Failed to remove media from collection', 500);
     });
 
@@ -574,7 +588,10 @@ collectionRoutes.patch(
       memberId,
       data,
       sessionUser.id
-    ).catch(() => {
+    ).catch((err) => {
+      if (err instanceof AppError) {
+        throw err;
+      }
       throw new AppError('Failed to update collection member', 500);
     });
 
@@ -624,7 +641,10 @@ collectionRoutes.delete(
       collectionId,
       memberId,
       sessionUser.id
-    ).catch(() => {
+    ).catch((err) => {
+      if (err instanceof AppError) {
+        throw err;
+      }
       throw new AppError('Failed to remove member from collection', 500);
     });
 
