@@ -24,6 +24,17 @@
 - `PATCH /collections/:collectionId/members/:memberId`
 - `DELETE /collections/:collectionId/members/:memberId`
 
+Invitations must be explicitly accepted by the invited user before they gain access.
+
+The `CollectionUser` model in Prisma includes:
+- `invitedAt`: Timestamp when invitation was created (defaults to `now()`)
+- `accepted`: Boolean flag (defaults to `false`)
+- `role`: The role assigned to the member (OWNER, COLLABORATOR, READER)
+
+
+`POST /api/collections/:collectionId/members` (owner only, can specify role)
+`GET /api/collections/invitations` (authenticated user, lists pending invitations)
+`POST /api/collections/:collectionId/invitations/respond` (invited user only, accepts or rejects)
 
 
 
