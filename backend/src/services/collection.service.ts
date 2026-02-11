@@ -1,8 +1,9 @@
 import prisma from "@/db";
-import { CollectionRole, Visibility } from "@/generated/prisma/browser";
+import { CollectionRole } from "@/generated/prisma/browser";
 import type { Prisma, Collection, CollectionMedia, CollectionUser } from "@/generated/prisma/browser";
 import { AppError } from "@/middleware/errorHandler";
-import type { ListQuery, PaginatedData, PaginationLinks } from "@/types/types";
+import type { ListQuery, PaginatedData } from "@/types/types";
+import { queryUtils } from "@/services/query.utils";
 
 type CollectionWhereClause = Omit<ListQuery, 'page' | 'pageSize' | 'sort' | 'order' | 'cursor'>;
 
@@ -39,7 +40,7 @@ export const collectionService = {
     const sort = query.sort || 'createdAt';
     const order = query.order || 'desc';
     const filterWhere = this.buildWhereClause(query);
-    const accessWhere = this.buildAccessWhere(userId);
+    const accessWhere = queryUtils.buildCollectionAccessWhere(userId);
     const where = Object.keys(filterWhere).length > 0
       ? { AND: [filterWhere, accessWhere] }
       : accessWhere;
@@ -64,7 +65,7 @@ export const collectionService = {
       const lastItem = items.at(-1);
       const nextCursor = hasMore && lastItem ? lastItem.id : null;
 
-      const links = this.buildCursorPaginationLinks(query, pageSize, nextCursor);
+      const links = queryUtils.buildCursorPaginationLinks('/api/collections', query, pageSize, nextCursor);
 
       return {
         data: items,
@@ -99,7 +100,7 @@ export const collectionService = {
     const pages = Math.ceil(total / pageSize);
     const lastItem = data.at(-1);
     const nextCursor = lastItem ? lastItem.id : null;
-    const links = this.buildPaginationLinks(query, page, pageSize, pages);
+    const links = queryUtils.buildPaginationLinks('/api/collections', query, page, pageSize, pages);
 
     return {
       data,
@@ -120,7 +121,7 @@ export const collectionService = {
   buildWhereClause(query: CollectionWhereClause): Prisma.CollectionWhereInput {
     const where: Prisma.CollectionWhereInput = {};
 
-    const tagList = this.parseCommaSeparated(query.tags, query.tag);
+    const tagList = queryUtils.parseCommaSeparated(query.tags, query.tag);
     if (tagList.length > 0) {
       where.tags = { hasSome: tagList };
     }
@@ -135,115 +136,7 @@ export const collectionService = {
     return where;
   },
 
-  /**
-   * Build access control where clause for collection visibility
-   * @param {string} [userId] Optional user ID for permission checking
-   * @returns {Prisma.CollectionWhereInput} Where clause that filters by visibility and user access
-   */
-  buildAccessWhere(userId?: string): Prisma.CollectionWhereInput {
-    const publicAccess: Prisma.CollectionWhereInput = {
-      visibility: Visibility.PUBLIC,
-    };
 
-    if (!userId) {
-      return publicAccess;
-    }
-
-    const memberAccess: Prisma.CollectionWhereInput = {
-      OR: [
-        { ownerId: userId },
-        { members: { some: { userId, accepted: true } } },
-      ],
-    };
-
-    return { OR: [publicAccess, memberAccess] };
-  },
-
-  /**
-   * Parse comma-separated strings into an array
-   * @param {string} [commaSeparated] Comma-separated string to split into array
-   * @param {string} [single] Single string value as fallback
-   * @returns {string[]} Array of parsed strings
-   */
-  parseCommaSeparated(commaSeparated?: string, single?: string): string[] {
-    if (commaSeparated) {
-      return commaSeparated.split(',').map(s => s.trim()).filter(Boolean);
-    }
-    if (single) {
-      return [single];
-    }
-    return [];
-  },
-
-  /**
-   * Build pagination links for API responses
-   * @param {ListQuery} query Query parameters
-   * @param {number} page Current page number
-   * @param {number} pageSize Number of items per page
-   * @param {number} pages Total number of pages
-   * @returns {PaginationLinks} Object containing self, next, and prev links
-   */
-  buildPaginationLinks(query: ListQuery, page: number, pageSize: number, pages: number): PaginationLinks {
-    const baseUrl = '/api/collections';
-    const queryParams = new URLSearchParams();
-    
-    if (query.tag) queryParams.set('tag', query.tag);
-    if (query.tags) queryParams.set('tags', query.tags);
-    if (query.q) queryParams.set('q', query.q);
-    if (query.sort) queryParams.set('sort', query.sort);
-    if (query.order) queryParams.set('order', query.order);
-
-    const buildLink = (p: number) => {
-      const params = new URLSearchParams(queryParams);
-      params.set('page', p.toString());
-      params.set('pageSize', pageSize.toString());
-      return `${baseUrl}?${params.toString()}`;
-    };
-
-    return {
-      self: buildLink(page),
-      next: page < pages ? buildLink(page + 1) : null,
-      prev: page > 1 ? buildLink(page - 1) : null,
-    };
-  },
-
-  /**
-   * Build cursor-based pagination links
-   * @param {ListQuery} query Query parameters
-   * @param {number} pageSize Number of items to fetch
-   * @param {string | null} nextCursor Cursor for next page
-   * @returns {PaginationLinks} Object containing self and next links
-   */
-  buildCursorPaginationLinks(query: ListQuery, pageSize: number, nextCursor: string | null): PaginationLinks {
-    const baseUrl = '/api/collections';
-    const queryParams = new URLSearchParams();
-    
-    if (query.tag) queryParams.set('tag', query.tag);
-    if (query.tags) queryParams.set('tags', query.tags);
-    if (query.q) queryParams.set('q', query.q);
-    if (query.sort) queryParams.set('sort', query.sort);
-    if (query.order) queryParams.set('order', query.order);
-    queryParams.set('pageSize', pageSize.toString());
-
-    const buildSelfLink = () => {
-      const params = new URLSearchParams(queryParams);
-      if (query.cursor) params.set('cursor', query.cursor);
-      return `${baseUrl}?${params.toString()}`;
-    };
-
-    const buildNextLink = () => {
-      if (!nextCursor) return null;
-      const params = new URLSearchParams(queryParams);
-      params.set('cursor', nextCursor);
-      return `${baseUrl}?${params.toString()}`;
-    };
-
-    return {
-      self: buildSelfLink(),
-      next: buildNextLink(),
-      prev: null,
-    };
-  },
 
   /**
    * Get a collection by ID with access control
@@ -252,7 +145,7 @@ export const collectionService = {
    * @returns {Promise<Collection | null>} The collection or null if not found or not authorized
    */
   async getById(id: string, userId?: string): Promise<Collection | null> {
-    const accessWhere = this.buildAccessWhere(userId);
+    const accessWhere = queryUtils.buildCollectionAccessWhere(userId);
     return await prisma.collection.findFirst({
       where: {
         AND: [
@@ -320,12 +213,7 @@ export const collectionService = {
    * @returns {Promise<CollectionMedia>} The created collection media entry
    * @throws {AppError} If media already in collection, media not found, or user unauthorized
    */
-  async addMediaToCollection(
-    collectionId: string,
-    mediaId: string,
-    position: number,
-    userId: string
-  ): Promise<CollectionMedia> {
+  async addMediaToCollection(collectionId: string, mediaId: string, position: number, userId: string): Promise<CollectionMedia> {
     try {
       await this.requireCollectionRole(collectionId, userId, [CollectionRole.OWNER, CollectionRole.COLLABORATOR]);
 
